@@ -75,6 +75,10 @@ export default function StatsCards({ reports }: Props) {
             <div className="stat-value blue">{metrics.akCount}</div>
             <div className="stat-label">Hồ sơ AK</div>
           </div>
+          <div className="stat-card">
+            <div className="stat-value amber">{metrics.adCount}</div>
+            <div className="stat-label">Hồ sơ AD</div>
+          </div>
         </div>
       </div>
 
