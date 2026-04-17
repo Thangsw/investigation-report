@@ -10,8 +10,8 @@ interface Props {
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return '—';
-  const [y, m, d] = dateStr.split('-');
-  return `${d}/${m}/${y}`;
+  const [year, month, day] = dateStr.split('-');
+  return `${day}/${month}/${year}`;
 }
 
 export default function ReportList({ reports, onEdit, onDelete }: Props) {
@@ -21,21 +21,21 @@ export default function ReportList({ reports, onEdit, onDelete }: Props) {
 
   return (
     <div className="point-list">
-      {reports.map((r, idx) => {
-        const deadlineStatus = getDeadlineStatus(r.thoiHanDinhChi);
+      {reports.map((report, index) => {
+        const deadlineStatus = getDeadlineStatus(report.thoiHanDinhChi);
         const isUpcoming = deadlineStatus === 'upcoming';
         const isOverdue = deadlineStatus === 'overdue';
-        const daysUntilDeadline = getDaysUntilDeadline(r.thoiHanDinhChi);
-        const createdAt = new Date(r.createdAt).toLocaleDateString('vi-VN');
+        const daysUntilDeadline = getDaysUntilDeadline(report.thoiHanDinhChi);
+        const createdAt = new Date(report.createdAt).toLocaleDateString('vi-VN');
 
         return (
-          <div key={r.id} className={`point-item ${r.loaiHoSo === 'AK' ? 'ak' : 'ad'}`}>
+          <div key={report.id} className={`point-item ${report.loaiHoSo === 'AK' ? 'ak' : 'ad'}`}>
             <div className="point-item-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <strong style={{ color: '#aaa', fontSize: '0.8rem' }}>#{idx + 1}</strong>
+                <strong style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>#{index + 1}</strong>
                 <div className="point-item-badges">
-                  <span className={`badge badge-${r.loaiHoSo.toLowerCase()}`}>{r.loaiHoSo}</span>
-                  <span className="badge badge-doi">{r.doi}</span>
+                  <span className={`badge badge-${report.loaiHoSo.toLowerCase()}`}>{report.loaiHoSo}</span>
+                  <span className="badge badge-doi">{report.doi}</span>
                   {isUpcoming && <span className="badge badge-upcoming">Sắp đến hạn</span>}
                   {isOverdue && <span className="badge badge-overdue">Quá hạn</span>}
                 </div>
@@ -44,37 +44,67 @@ export default function ReportList({ reports, onEdit, onDelete }: Props) {
             </div>
 
             <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: 4 }}>
-              ĐTV: {r.dtvName}
+              ĐTV: {report.dtvName}
             </p>
 
-            {r.nguoiCamHoSo !== r.dtvName && (
-              <p style={{ fontSize: '0.85rem', color: '#bbb', marginBottom: 4 }}>
-                Người cầm: {r.nguoiCamHoSo}
+            {report.nguoiCamHoSo !== report.dtvName && (
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
+                Người cầm: {report.nguoiCamHoSo}
               </p>
             )}
 
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.82rem', color: '#999', marginBottom: 6 }}>
-              {r.soHoSo && <span>Hồ sơ: <b style={{ color: '#ddd' }}>{r.soHoSo}</b></span>}
-              {r.soTap  && <span>Tập: <b style={{ color: '#ddd' }}>{r.soTap}</b></span>}
-              {r.soLuu  && <span>Lưu: <b style={{ color: '#ddd' }}>{r.soLuu}</b></span>}
+            <div
+              style={{
+                display: 'flex',
+                gap: 16,
+                flexWrap: 'wrap',
+                fontSize: '0.82rem',
+                color: 'var(--text-muted)',
+                marginBottom: 6,
+              }}
+            >
+              {report.soHoSo && (
+                <span>
+                  Hồ sơ: <b style={{ color: 'var(--text-primary)' }}>{report.soHoSo}</b>
+                </span>
+              )}
+              {report.soTap && (
+                <span>
+                  Tập: <b style={{ color: 'var(--text-primary)' }}>{report.soTap}</b>
+                </span>
+              )}
+              {report.soLuu && (
+                <span>
+                  Lưu: <b style={{ color: 'var(--text-primary)' }}>{report.soLuu}</b>
+                </span>
+              )}
             </div>
 
-            {r.trichYeu && (
-              <p style={{ fontSize: '0.85rem', color: '#ddd', marginBottom: 4, fontStyle: 'italic' }}>
-                {r.trichYeu}
+            {report.trichYeu && (
+              <p
+                style={{
+                  fontSize: '0.85rem',
+                  color: 'var(--text-primary)',
+                  marginBottom: 4,
+                  fontStyle: 'italic',
+                }}
+              >
+                {report.trichYeu}
               </p>
             )}
 
-            {r.tinhTrang && (
-              <p style={{ fontSize: '0.85rem', color: '#ccc', marginBottom: 4 }}>
-                Tình trạng: {r.tinhTrang}
+            {report.tinhTrang && (
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
+                Tình trạng: {report.tinhTrang}
               </p>
             )}
 
-            {r.thoiHanDinhChi && (
-              <p style={{ fontSize: '0.82rem', marginBottom: 4 }}
-                 className={isOverdue ? 'text-overdue' : (isUpcoming ? 'text-upcoming' : '')}>
-                Hạn đình chỉ: {formatDate(r.thoiHanDinhChi)}
+            {report.thoiHanDinhChi && (
+              <p
+                style={{ fontSize: '0.82rem', marginBottom: 4 }}
+                className={isOverdue ? 'text-overdue' : isUpcoming ? 'text-upcoming' : ''}
+              >
+                Hạn đình chỉ: {formatDate(report.thoiHanDinhChi)}
                 {isUpcoming && daysUntilDeadline !== null && (
                   daysUntilDeadline === 0
                     ? ' (đến hạn hôm nay)'
@@ -84,24 +114,33 @@ export default function ReportList({ reports, onEdit, onDelete }: Props) {
               </p>
             )}
 
-            {r.khoKhan && (
-              <p style={{ fontSize: '0.82rem', color: '#aaa', whiteSpace: 'pre-wrap', marginTop: 4 }}>
-                {r.khoKhan}
+            {report.khoKhan && (
+              <p
+                style={{
+                  fontSize: '0.82rem',
+                  color: 'var(--text-secondary)',
+                  whiteSpace: 'pre-wrap',
+                  marginTop: 4,
+                }}
+              >
+                {report.khoKhan}
               </p>
             )}
 
             {(onEdit || onDelete) && (
               <div className="point-actions">
                 {onEdit && (
-                  <button className="btn-small" onClick={() => onEdit(r)}>
+                  <button className="btn-small" onClick={() => onEdit(report)}>
                     <Edit size={12} /> Sửa
                   </button>
                 )}
                 {onDelete && (
-                  <button className="btn-small btn-delete"
+                  <button
+                    className="btn-small btn-delete"
                     onClick={() => {
-                      if (window.confirm('Xóa hồ sơ này?')) onDelete(r.id);
-                    }}>
+                      if (window.confirm('Xóa hồ sơ này?')) onDelete(report.id);
+                    }}
+                  >
                     <Trash2 size={12} /> Xóa
                   </button>
                 )}

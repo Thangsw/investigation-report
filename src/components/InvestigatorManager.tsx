@@ -10,7 +10,13 @@ interface Props {
   onClose: () => void;
 }
 
-export default function InvestigatorManager({ investigators, onAdd, onUpdate, onDelete, onClose }: Props) {
+export default function InvestigatorManager({
+  investigators,
+  onAdd,
+  onUpdate,
+  onDelete,
+  onClose,
+}: Props) {
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -22,9 +28,9 @@ export default function InvestigatorManager({ investigators, onAdd, onUpdate, on
     setNewName('');
   };
 
-  const startEdit = (d: Investigator) => {
-    setEditingId(d.id);
-    setEditingName(d.name);
+  const startEdit = (investigator: Investigator) => {
+    setEditingId(investigator.id);
+    setEditingName(investigator.name);
   };
 
   const confirmEdit = async () => {
@@ -38,22 +44,26 @@ export default function InvestigatorManager({ investigators, onAdd, onUpdate, on
     <>
       <div className="sheet-header">
         <h2>Quản lý điều tra viên</h2>
-        <button className="btn-close" onClick={onClose}><X size={16} /></button>
+        <button className="btn-close" onClick={onClose}>
+          <X size={16} />
+        </button>
       </div>
 
       <div className="dtv-list">
         {investigators.length === 0 && (
-          <p style={{ color: '#666', fontSize: '0.85rem' }}>Chưa có ĐTV nào.</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Chưa có ĐTV nào.</p>
         )}
-        {investigators.map(d => (
-          <div key={d.id} className="dtv-item">
-            {editingId === d.id ? (
+        {investigators.map((investigator) => (
+          <div key={investigator.id} className="dtv-item">
+            {editingId === investigator.id ? (
               <>
                 <input
                   className="form-control"
                   value={editingName}
-                  onChange={e => setEditingName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') confirmEdit(); }}
+                  onChange={(event) => setEditingName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') confirmEdit();
+                  }}
                   autoFocus
                   style={{ flex: 1, marginBottom: 0 }}
                 />
@@ -66,14 +76,16 @@ export default function InvestigatorManager({ investigators, onAdd, onUpdate, on
               </>
             ) : (
               <>
-                <span className="dtv-name">{d.name}</span>
-                <button className="btn-small" onClick={() => startEdit(d)}>
+                <span className="dtv-name">{investigator.name}</span>
+                <button className="btn-small" onClick={() => startEdit(investigator)}>
                   <Edit size={12} />
                 </button>
-                <button className="btn-small btn-delete"
+                <button
+                  className="btn-small btn-delete"
                   onClick={() => {
-                    if (window.confirm(`Xóa ĐTV "${d.name}"?`)) onDelete(d.id);
-                  }}>
+                    if (window.confirm(`Xóa ĐTV "${investigator.name}"?`)) onDelete(investigator.id);
+                  }}
+                >
                   <Trash2 size={12} />
                 </button>
               </>
@@ -86,8 +98,10 @@ export default function InvestigatorManager({ investigators, onAdd, onUpdate, on
         <input
           className="form-control"
           value={newName}
-          onChange={e => setNewName(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
+          onChange={(event) => setNewName(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') handleAdd();
+          }}
           placeholder="Thêm tên ĐTV mới..."
         />
         <button className="btn-add" onClick={handleAdd}>

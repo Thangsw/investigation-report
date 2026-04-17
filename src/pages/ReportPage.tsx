@@ -9,31 +9,32 @@ import InvestigatorManager from '../components/InvestigatorManager';
 type SheetType = 'form' | 'dtv' | null;
 
 export default function ReportPage() {
-  const [reports, setReports]             = useState<Report[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [investigators, setInvestigators] = useState<Investigator[]>([]);
   const [editingReport, setEditingReport] = useState<Report | null>(null);
-  const [sheetOpen, setSheetOpen]         = useState<SheetType>(null);
-
-  // ĐTV lọc: ĐTV tự nhập tên mình để chỉ thấy hồ sơ của mình
+  const [sheetOpen, setSheetOpen] = useState<SheetType>(null);
   const [myName, setMyName] = useState('');
 
   const fetchAll = useCallback(async () => {
-    const [r, d] = await Promise.all([api.getReports(), api.getInvestigators()]);
-    setReports(r);
-    setInvestigators(d);
+    const [reportData, investigatorData] = await Promise.all([
+      api.getReports(),
+      api.getInvestigators(),
+    ]);
+    setReports(reportData);
+    setInvestigators(investigatorData);
   }, []);
 
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
-  // Lọc hồ sơ theo tên ĐTV đang xem
   const visibleReports = useMemo(() => {
     const name = myName.trim();
     if (!name) return reports;
-    return reports.filter(r =>
-      r.dtvName.toLowerCase().includes(name.toLowerCase()) ||
-      r.nguoiCamHoSo.toLowerCase().includes(name.toLowerCase())
+
+    return reports.filter((report) =>
+      report.dtvName.toLowerCase().includes(name.toLowerCase()) ||
+      report.nguoiCamHoSo.toLowerCase().includes(name.toLowerCase()),
     );
   }, [reports, myName]);
 
@@ -53,6 +54,7 @@ export default function ReportPage() {
     } else {
       await api.createReport(data);
     }
+
     closeSheet();
     await fetchAll();
   };
@@ -62,15 +64,16 @@ export default function ReportPage() {
     await fetchAll();
   };
 
-  // ── Investigator CRUD ─────────────────────────────────────────────────────
   const handleAddDTV = async (name: string) => {
     await api.createInvestigator(name);
     setInvestigators(await api.getInvestigators());
   };
+
   const handleUpdateDTV = async (id: string, name: string) => {
     await api.updateInvestigator(id, name);
     setInvestigators(await api.getInvestigators());
   };
+
   const handleDeleteDTV = async (id: string) => {
     await api.deleteInvestigator(id);
     setInvestigators(await api.getInvestigators());
@@ -80,10 +83,8 @@ export default function ReportPage() {
 
   return (
     <div style={{ position: 'relative' }}>
-
-      {/* ── Bộ lọc theo tên ĐTV ─────────────────────────────────────── */}
       <div className="form-group" style={{ marginBottom: 14 }}>
-        <label style={{ fontSize: '0.8rem', color: '#888' }}>
+        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
           Lọc hồ sơ theo tên ĐTV (nhập tên bạn để chỉ xem hồ sơ của mình):
         </label>
         <div style={{ position: 'relative' }}>
@@ -92,7 +93,7 @@ export default function ReportPage() {
             className="form-control"
             list="myname-datalist"
             value={myName}
-            onChange={e => setMyName(e.target.value)}
+            onChange={(event) => setMyName(event.target.value)}
             placeholder="Nhập tên để lọc..."
             autoComplete="off"
           />
@@ -100,9 +101,15 @@ export default function ReportPage() {
             <button
               onClick={() => setMyName('')}
               style={{
-                position: 'absolute', right: 10, top: '50%',
-                transform: 'translateY(-50%)', background: 'none',
-                border: 'none', color: '#888', cursor: 'pointer', padding: 4,
+                position: 'absolute',
+                right: 10,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: 4,
               }}
             >
               <X size={14} />
@@ -110,27 +117,20 @@ export default function ReportPage() {
           )}
         </div>
         <datalist id="myname-datalist">
-          {investigators.map(d => (
-            <option key={d.id} value={d.name} />
+          {investigators.map((investigator) => (
+            <option key={investigator.id} value={investigator.name} />
           ))}
         </datalist>
       </div>
 
-      {/* Đếm */}
-      <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: 12 }}>
+      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
         {myNameTrimmed
           ? `${visibleReports.length} hồ sơ của "${myNameTrimmed}" (tổng: ${reports.length})`
-          : `${reports.length} hồ sơ`
-        }
+          : `${reports.length} hồ sơ`}
       </div>
 
-      <ReportList
-        reports={visibleReports}
-        onEdit={openForm}
-        onDelete={handleDelete}
-      />
+      <ReportList reports={visibleReports} onEdit={openForm} onDelete={handleDelete} />
 
-      {/* FAB: Thêm hồ sơ */}
       <div className="fab-container left">
         <button
           className="fab-extended"
@@ -142,21 +142,20 @@ export default function ReportPage() {
         </button>
       </div>
 
-      {/* FAB: Quản lý ĐTV */}
       <div className="fab-container right">
         <button className="fab fab-secondary" onClick={() => setSheetOpen('dtv')} title="Quản lý ĐTV">
           <Users size={22} />
         </button>
       </div>
 
-      {/* Backdrop */}
       <div className={`sheet-backdrop ${sheetOpen ? 'visible' : ''}`} onClick={closeSheet} />
 
-      {/* Bottom sheet: Form */}
       <div className={`bottom-sheet glass-panel ${sheetOpen === 'form' ? 'open' : ''}`}>
         <div className="sheet-header">
           <h2>{editingReport ? 'Sửa hồ sơ' : 'Thêm hồ sơ mới'}</h2>
-          <button className="btn-close" onClick={closeSheet}><X size={16} /></button>
+          <button className="btn-close" onClick={closeSheet}>
+            <X size={16} />
+          </button>
         </div>
         <ReportForm
           investigators={investigators}
@@ -167,9 +166,10 @@ export default function ReportPage() {
         />
       </div>
 
-      {/* Bottom sheet: Investigator Manager */}
-      <div className={`bottom-sheet glass-panel ${sheetOpen === 'dtv' ? 'open' : ''}`}
-           style={{ maxHeight: '70vh' }}>
+      <div
+        className={`bottom-sheet glass-panel ${sheetOpen === 'dtv' ? 'open' : ''}`}
+        style={{ maxHeight: '70vh' }}
+      >
         <InvestigatorManager
           investigators={investigators}
           onAdd={handleAddDTV}
