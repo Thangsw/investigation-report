@@ -11,6 +11,7 @@ export default function StatsCards({ reports }: Props) {
   const maxDTV = dtvEntries[0]?.[1] || 1;
   const completionRateLabel = `${metrics.completionRate.toFixed(1)}%`;
   const extractionRateLabel = `${metrics.extractionRate.toFixed(1)}%`;
+  const showMissingAKCard = metrics.adCount === 0;
 
   return (
     <>
@@ -72,8 +73,12 @@ export default function StatsCards({ reports }: Props) {
             <div className="stat-label">Khó khăn / vướng mắc</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value amber">{metrics.adCount}</div>
-            <div className="stat-label">Hồ sơ AD</div>
+            <div className="stat-value amber">
+              {showMissingAKCard ? metrics.remainingToReport : metrics.adCount}
+            </div>
+            <div className="stat-label">
+              {showMissingAKCard ? 'Còn thiếu hồ sơ AK' : 'Hồ sơ AD'}
+            </div>
           </div>
         </div>
       </div>
