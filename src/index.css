@@ -674,9 +674,11 @@ select {
   background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
   color: #fff;
   text-decoration: none;
+  border: none;
   font-weight: 700;
   font-size: 0.96rem;
   box-shadow: 0 10px 24px rgba(255, 71, 87, 0.22);
+  cursor: pointer;
 }
 
 .btn-primary-cta:hover {
