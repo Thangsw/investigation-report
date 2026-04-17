@@ -15,6 +15,7 @@ const EMPTY_FORM: ReportFormData = {
   soTap: '',
   soHoSo: '',
   soLuu: '',
+  hoSoHienHanh: false,
   trichYeu: '',
   doi: 'Đội 2',
   tinhTrang: '',
@@ -51,6 +52,7 @@ export default function ReportForm({
         soTap: editingReport.soTap,
         soHoSo: editingReport.soHoSo,
         soLuu: editingReport.soLuu,
+        hoSoHienHanh: editingReport.hoSoHienHanh,
         trichYeu: editingReport.trichYeu || '',
         doi: editingReport.doi,
         tinhTrang: editingReport.tinhTrang,
@@ -63,7 +65,7 @@ export default function ReportForm({
     }
   }, [editingReport, prefillDTV]);
 
-  const setField = (key: keyof ReportFormData, value: string) => {
+  const setField = <K extends keyof ReportFormData>(key: K, value: ReportFormData[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -177,6 +179,14 @@ export default function ReportForm({
             value={form.soLuu}
             onChange={(event) => setField('soLuu', event.target.value)}
           />
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={form.hoSoHienHanh}
+              onChange={(event) => setField('hoSoHienHanh', event.target.checked)}
+            />
+            <span>Hồ sơ hiện hành</span>
+          </label>
         </div>
       </div>
 
@@ -263,7 +273,6 @@ export default function ReportForm({
           rows={3}
           value={form.khoKhan}
           onChange={(event) => setField('khoKhan', event.target.value)}
-          placeholder="Ghi tự do..."
         />
       </div>
 

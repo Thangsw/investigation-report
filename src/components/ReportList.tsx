@@ -36,6 +36,7 @@ export default function ReportList({ reports, onEdit, onDelete }: Props) {
                 <div className="point-item-badges">
                   <span className={`badge badge-${report.loaiHoSo.toLowerCase()}`}>{report.loaiHoSo}</span>
                   <span className="badge badge-doi">{report.doi}</span>
+                  {report.hoSoHienHanh && <span className="badge badge-current">Hiện hành</span>}
                   {isUpcoming && <span className="badge badge-upcoming">Sắp hết thời hiệu</span>}
                   {isOverdue && <span className="badge badge-overdue">Quá thời hiệu</span>}
                 </div>

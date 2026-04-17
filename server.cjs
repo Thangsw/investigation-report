@@ -20,6 +20,7 @@ if (!fs.existsSync(DATA_DIR)) {
 
 const normalizeReport = (raw = {}) => {
   const createdAt = raw.createdAt || new Date().toISOString();
+  const hoSoHienHanh = raw.hoSoHienHanh === true || raw.hoSoHienHanh === 'true';
 
   return {
     id: raw.id || Date.now().toString(),
@@ -29,6 +30,7 @@ const normalizeReport = (raw = {}) => {
     soTap: raw.soTap || '',
     soHoSo: raw.soHoSo || '',
     soLuu: raw.soLuu || '',
+    hoSoHienHanh,
     trichYeu: raw.trichYeu || '',
     doi: raw.doi || 'Đội 2',
     tinhTrang: raw.tinhTrang || '',
@@ -71,6 +73,7 @@ app.get('/api/reports/export', (_req, res) => {
         'Số tập',
         'Số hồ sơ',
         'Số lưu',
+        'Hồ sơ hiện hành',
         'Trích yếu',
         'Hồ sơ thuộc lĩnh vực',
         'Ngày hết thời hiệu truy cứu TNHS',
@@ -87,6 +90,7 @@ app.get('/api/reports/export', (_req, res) => {
         report.soTap,
         report.soHoSo,
         report.soLuu,
+        report.hoSoHienHanh ? '✓' : '',
         report.trichYeu || '',
         report.doi,
         report.ngayHetThoiHieuTruyCuuTNHS,
@@ -108,6 +112,7 @@ app.get('/api/reports/export', (_req, res) => {
       { wch: 8 },
       { wch: 14 },
       { wch: 10 },
+      { wch: 14 },
       { wch: 35 },
       { wch: 18 },
       { wch: 18 },
@@ -162,6 +167,7 @@ app.post('/api/reports', (req, res) => {
       soTap: body.soTap || '',
       soHoSo: body.soHoSo || '',
       soLuu: body.soLuu || '',
+      hoSoHienHanh: Boolean(body.hoSoHienHanh),
       trichYeu: body.trichYeu || '',
       doi: body.doi,
       tinhTrang: body.tinhTrang || '',
@@ -208,6 +214,7 @@ app.put('/api/reports/:id', (req, res) => {
       soTap: body.soTap ?? existing.soTap,
       soHoSo: body.soHoSo ?? existing.soHoSo,
       soLuu: body.soLuu ?? existing.soLuu,
+      hoSoHienHanh: body.hoSoHienHanh ?? existing.hoSoHienHanh ?? false,
       trichYeu: body.trichYeu ?? existing.trichYeu ?? '',
       doi: body.doi ?? existing.doi,
       tinhTrang: body.tinhTrang ?? existing.tinhTrang,

@@ -230,6 +230,12 @@ select {
   border: 1px solid rgba(46, 213, 115, 0.24);
 }
 
+.badge-current {
+  background: rgba(15, 23, 42, 0.08);
+  color: var(--text-primary);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
 .badge-upcoming {
   background: rgba(255, 159, 67, 0.16);
   color: #dd7a16;
@@ -465,6 +471,22 @@ select {
   font-size: 0.76rem;
   color: var(--text-muted);
   line-height: 1.4;
+}
+
+.checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.checkbox-row input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: #ff4757;
 }
 
 .form-row {
