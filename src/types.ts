@@ -9,6 +9,7 @@ export interface Report {
   hoSoHienHanh: boolean;
   trichYeu: string;
   doi: 'Đội 2' | 'Đội 3' | 'Đội 4';
+  toBanDia: 'Hoà Bình' | 'Lạc Thuỷ';
   tinhTrang: string;
   ketQuaGiaiQuyet: string;
   ngayHetThoiHieuTruyCuuTNHS: string; // YYYY-MM-DD

@@ -3,21 +3,15 @@ import { X } from 'lucide-react';
 import { api } from '../api';
 import type { Report, Investigator, ReportFormData } from '../types';
 import StatsCards from '../components/StatsCards';
-import FilterBar from '../components/FilterBar';
+import FilterBar, { type Filters } from '../components/FilterBar';
 import ReportList from '../components/ReportList';
 import ExportButton from '../components/ExportButton';
 import ReportForm from '../components/ReportForm';
 
-interface Filters {
-  dtvName: string;
-  loaiHoSo: string;
-  doi: string;
-}
-
 export default function DashboardPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [investigators, setInvestigators] = useState<Investigator[]>([]);
-  const [filters, setFilters] = useState<Filters>({ dtvName: '', loaiHoSo: '', doi: '' });
+  const [filters, setFilters] = useState<Filters>({ dtvName: '', loaiHoSo: '', doi: '', toBanDia: '' });
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const fetchAll = useCallback(async () => {
@@ -54,6 +48,7 @@ export default function DashboardPage() {
       if (filters.dtvName && report.dtvName !== filters.dtvName) return false;
       if (filters.loaiHoSo && report.loaiHoSo !== filters.loaiHoSo) return false;
       if (filters.doi && report.doi !== filters.doi) return false;
+      if (filters.toBanDia && (report.toBanDia ?? 'Hoà Bình') !== filters.toBanDia) return false;
       return true;
     });
   }, [reports, filters]);
@@ -66,7 +61,7 @@ export default function DashboardPage() {
           <button type="button" className="btn-primary-cta" onClick={() => setSheetOpen(true)}>
             Thêm hồ sơ đã làm
           </button>
-          <ExportButton />
+          <ExportButton filters={filters} />
         </div>
       </div>
 

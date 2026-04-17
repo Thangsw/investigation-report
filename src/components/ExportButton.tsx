@@ -1,11 +1,17 @@
 import { Download } from 'lucide-react';
 import { api } from '../api';
+import type { Filters } from './FilterBar';
 
-export default function ExportButton() {
+interface Props {
+  filters?: Partial<Filters>;
+  label?: string;
+}
+
+export default function ExportButton({ filters, label = 'Xuất Excel' }: Props) {
   return (
-    <button className="btn-export" onClick={api.exportExcel}>
+    <button className="btn-export" onClick={() => api.exportExcel(filters)}>
       <Download size={16} />
-      Xuất Excel
+      {label}
     </button>
   );
 }

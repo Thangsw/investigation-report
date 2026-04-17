@@ -33,6 +33,7 @@ const normalizeReport = (raw = {}) => {
     hoSoHienHanh,
     trichYeu: raw.trichYeu || '',
     doi: raw.doi || 'Đội 2',
+    toBanDia: ['Hoà Bình', 'Lạc Thuỷ'].includes(raw.toBanDia) ? raw.toBanDia : 'Hoà Bình',
     tinhTrang: raw.tinhTrang || '',
     ketQuaGiaiQuyet: raw.ketQuaGiaiQuyet || '',
     ngayHetThoiHieuTruyCuuTNHS: raw.ngayHetThoiHieuTruyCuuTNHS || raw.thoiHanDinhChi || '',
@@ -61,9 +62,16 @@ const writeInvestigators = (data) => {
   fs.writeFileSync(investigatorsFile, JSON.stringify(data, null, 2));
 };
 
-app.get('/api/reports/export', (_req, res) => {
+app.get('/api/reports/export', (req, res) => {
   try {
-    const reports = readReports();
+    let reports = readReports();
+
+    // Optional query-param filtering
+    const { dtvName, loaiHoSo, doi, toBanDia } = req.query;
+    if (dtvName)   reports = reports.filter(r => r.dtvName === dtvName);
+    if (loaiHoSo)  reports = reports.filter(r => r.loaiHoSo === loaiHoSo);
+    if (doi)       reports = reports.filter(r => r.doi === doi);
+    if (toBanDia)  reports = reports.filter(r => r.toBanDia === toBanDia);
 
     const wsData = [
       [
@@ -77,6 +85,7 @@ app.get('/api/reports/export', (_req, res) => {
         'Hồ sơ hiện hành',
         'Trích yếu',
         'Hồ sơ thuộc lĩnh vực',
+        'Tổ địa bàn',
         'Ngày hết thời hiệu truy cứu TNHS',
         'Tính chất, mức độ nghiêm trọng',
         'Tình trạng hiện tại',
@@ -95,6 +104,7 @@ app.get('/api/reports/export', (_req, res) => {
         report.hoSoHienHanh ? '✓' : '',
         report.trichYeu || '',
         report.doi,
+        report.toBanDia || 'Hoà Bình',
         report.ngayHetThoiHieuTruyCuuTNHS,
         report.tinhChatMucDoNghiemTrong || '',
         report.tinhTrang,
@@ -118,6 +128,7 @@ app.get('/api/reports/export', (_req, res) => {
       { wch: 14 },
       { wch: 35 },
       { wch: 18 },
+      { wch: 14 },
       { wch: 18 },
       { wch: 24 },
       { wch: 25 },
@@ -174,6 +185,7 @@ app.post('/api/reports', (req, res) => {
       hoSoHienHanh: Boolean(body.hoSoHienHanh),
       trichYeu: body.trichYeu || '',
       doi: body.doi,
+      toBanDia: body.toBanDia || 'Hoà Bình',
       tinhTrang: body.tinhTrang || '',
       ketQuaGiaiQuyet: body.ketQuaGiaiQuyet || '',
       ngayHetThoiHieuTruyCuuTNHS,
@@ -222,6 +234,7 @@ app.put('/api/reports/:id', (req, res) => {
       hoSoHienHanh: body.hoSoHienHanh ?? existing.hoSoHienHanh ?? false,
       trichYeu: body.trichYeu ?? existing.trichYeu ?? '',
       doi: body.doi ?? existing.doi,
+      toBanDia: body.toBanDia ?? existing.toBanDia ?? 'Hoà Bình',
       tinhTrang: body.tinhTrang ?? existing.tinhTrang,
       ketQuaGiaiQuyet: body.ketQuaGiaiQuyet ?? existing.ketQuaGiaiQuyet ?? '',
       ngayHetThoiHieuTruyCuuTNHS: nextNgayHetThoiHieuTruyCuuTNHS,

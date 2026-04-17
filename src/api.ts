@@ -15,8 +15,13 @@ export const api = {
   deleteReport: (id: string) =>
     axios.delete(`/api/reports/${id}`),
 
-  exportExcel: () => {
-    window.location.href = '/api/reports/export';
+  exportExcel: (filters?: Partial<Record<'dtvName' | 'loaiHoSo' | 'doi' | 'toBanDia', string>>) => {
+    const qs = filters
+      ? new URLSearchParams(
+          Object.entries(filters).filter(([, v]) => v) as [string, string][],
+        ).toString()
+      : '';
+    window.location.href = `/api/reports/export${qs ? `?${qs}` : ''}`;
   },
 
   // ── Investigators ─────────────────────────────────────────────────────────

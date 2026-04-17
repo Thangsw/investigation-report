@@ -1,9 +1,10 @@
 import type { Investigator } from '../types';
 
-interface Filters {
+export interface Filters {
   dtvName: string;
   loaiHoSo: string;
   doi: string;
+  toBanDia: string;
 }
 
 interface Props {
@@ -45,6 +46,16 @@ export default function FilterBar({ investigators, filters, onChange }: Props) {
         <option value="Đội 2">Đội 2</option>
         <option value="Đội 3">Đội 3</option>
         <option value="Đội 4">Đội 4</option>
+      </select>
+
+      <select
+        className="form-control"
+        value={filters.toBanDia}
+        onChange={e => onChange('toBanDia', e.target.value)}
+      >
+        <option value="">Tất cả tổ</option>
+        <option value="Hoà Bình">Hoà Bình</option>
+        <option value="Lạc Thuỷ">Lạc Thuỷ</option>
       </select>
     </div>
   );

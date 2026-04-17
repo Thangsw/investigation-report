@@ -18,6 +18,7 @@ const EMPTY_FORM: ReportFormData = {
   hoSoHienHanh: false,
   trichYeu: '',
   doi: 'Đội 2',
+  toBanDia: 'Hoà Bình',
   tinhTrang: '',
   ketQuaGiaiQuyet: '',
   ngayHetThoiHieuTruyCuuTNHS: '',
@@ -42,7 +43,6 @@ export default function ReportForm({
 }: Props) {
   const [form, setForm] = useState<ReportFormData>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isAD = form.loaiHoSo === 'AD';
 
   useEffect(() => {
     if (editingReport) {
@@ -56,6 +56,7 @@ export default function ReportForm({
         hoSoHienHanh: editingReport.hoSoHienHanh,
         trichYeu: editingReport.trichYeu || '',
         doi: editingReport.doi,
+        toBanDia: editingReport.toBanDia ?? 'Hoà Bình',
         tinhTrang: editingReport.tinhTrang,
         ketQuaGiaiQuyet: editingReport.ketQuaGiaiQuyet || '',
         ngayHetThoiHieuTruyCuuTNHS: editingReport.ngayHetThoiHieuTruyCuuTNHS,
@@ -79,9 +80,37 @@ export default function ReportForm({
       return;
     }
 
-    if (isAD && !form.ngayHetThoiHieuTruyCuuTNHS) {
-      alert('Hồ sơ AD bắt buộc phải nhập Ngày hết thời hiệu truy cứu TNHS');
+    if (!form.soHoSo.trim()) {
+      alert('Vui lòng nhập Số hồ sơ');
       return;
+    }
+
+    if (!form.tinhChatMucDoNghiemTrong.trim()) {
+      alert('Vui lòng nhập Tính chất, mức độ nghiêm trọng');
+      return;
+    }
+
+    if (!form.ngayHetThoiHieuTruyCuuTNHS) {
+      alert('Vui lòng nhập Ngày hết thời hiệu truy cứu TNHS');
+      return;
+    }
+
+    // Soft warning nếu trích yếu không có địa danh
+    if (form.trichYeu.trim()) {
+      const lower = form.trichYeu.toLowerCase().normalize('NFC');
+      const hasLocation =
+        lower.includes('phường') ||
+        lower.includes('phuong') ||
+        lower.includes('xã') ||
+        lower.includes('xa ') ||
+        lower.includes('thị trấn') ||
+        lower.includes('thi tran');
+      if (!hasLocation) {
+        const proceed = window.confirm(
+          'Trích yếu chưa có địa danh cụ thể (phường/xã/thị trấn).\n\nVí dụ đúng: "Vụ lừa đảo xảy ra ngày 01/01/2024 tại phường Hoà Bình, tp. Hoà Bình"\n\nBạn có muốn tiếp tục lưu không?',
+        );
+        if (!proceed) return;
+      }
     }
 
     const data: ReportFormData = {
@@ -165,7 +194,7 @@ export default function ReportForm({
           />
         </div>
         <div className="form-group">
-          <label>Số hồ sơ</label>
+          <label>Số hồ sơ *</label>
           <input
             type="text"
             className="form-control"
@@ -196,11 +225,12 @@ export default function ReportForm({
         <label>Trích yếu</label>
         <textarea
           className="form-control"
-          rows={2}
+          rows={3}
           value={form.trichYeu}
           onChange={(event) => setField('trichYeu', event.target.value)}
-          placeholder="Tóm tắt nội dung vụ việc..."
+          placeholder='Vụ [...] xảy ra ngày [...] tại [...], hoặc tóm tắt vụ việc — không ghi chung chung "Lừa đảo chiếm đoạt tài sản" hoặc "Giết người"'
         />
+        <p className="field-note">Cần có địa danh cụ thể (phường/xã/thị trấn) trong nội dung</p>
       </div>
 
       <div className="form-group">
@@ -218,18 +248,41 @@ export default function ReportForm({
       </div>
 
       <div className="form-group">
-        <label>{isAD ? 'Ngày hết thời hiệu truy cứu TNHS *' : 'Ngày hết thời hiệu truy cứu TNHS'}</label>
+        <label>Tổ địa bàn *</label>
+        <div className="radio-group">
+          {(['Hoà Bình', 'Lạc Thuỷ'] as const).map((tob) => {
+            const key = tob === 'Hoà Bình' ? 'hb' : 'lt';
+            return (
+              <label
+                key={tob}
+                className={`radio-option ${form.toBanDia === tob ? `selected-${key}` : ''}`}
+              >
+                <input
+                  type="radio"
+                  name="toBanDia"
+                  value={tob}
+                  checked={form.toBanDia === tob}
+                  onChange={() => setField('toBanDia', tob)}
+                />
+                {tob}
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label>Ngày hết thời hiệu truy cứu TNHS *</label>
         <input
           type="date"
           className="form-control"
           value={form.ngayHetThoiHieuTruyCuuTNHS}
           onChange={(event) => setField('ngayHetThoiHieuTruyCuuTNHS', event.target.value)}
-          required={isAD}
         />
       </div>
 
       <div className="form-group">
-        <label>Tính chất, mức độ nghiêm trọng</label>
+        <label>Tính chất, mức độ nghiêm trọng *</label>
         <input
           type="text"
           className="form-control"
@@ -287,6 +340,7 @@ export default function ReportForm({
           rows={3}
           value={form.khoKhan}
           onChange={(event) => setField('khoKhan', event.target.value)}
+          placeholder="Không tìm thấy trên phần mềm ĐTHS, Không có đầy đủ tài liệu v.v..."
         />
       </div>
 

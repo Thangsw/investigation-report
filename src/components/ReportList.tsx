@@ -1,4 +1,4 @@
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Clock, AlertTriangle } from 'lucide-react';
 import type { Report } from '../types';
 import { getDaysUntilDeadline, getDeadlineStatus } from '../reportMetrics';
 
@@ -12,6 +12,17 @@ function formatDate(dateStr: string): string {
   if (!dateStr) return '—';
   const [year, month, day] = dateStr.split('-');
   return `${day}/${month}/${year}`;
+}
+
+function doiBadgeClass(doi: string) {
+  if (doi === 'Đội 2') return 'badge badge-doi-2';
+  if (doi === 'Đội 3') return 'badge badge-doi-3';
+  if (doi === 'Đội 4') return 'badge badge-doi-4';
+  return 'badge badge-doi-2';
+}
+
+function toBanDiaBadgeClass(tob: string) {
+  return tob === 'Lạc Thuỷ' ? 'badge badge-lt' : 'badge badge-hb';
 }
 
 export default function ReportList({ reports, onEdit, onDelete }: Props) {
@@ -35,10 +46,23 @@ export default function ReportList({ reports, onEdit, onDelete }: Props) {
                 <strong style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>#{index + 1}</strong>
                 <div className="point-item-badges">
                   <span className={`badge badge-${report.loaiHoSo.toLowerCase()}`}>{report.loaiHoSo}</span>
-                  <span className="badge badge-doi">{report.doi}</span>
+                  <span className={doiBadgeClass(report.doi)}>{report.doi}</span>
+                  <span className={toBanDiaBadgeClass(report.toBanDia ?? 'Hoà Bình')}>
+                    {report.toBanDia ?? 'Hoà Bình'}
+                  </span>
                   {report.hoSoHienHanh && <span className="badge badge-current">Hiện hành</span>}
-                  {isUpcoming && <span className="badge badge-upcoming">Sắp hết thời hiệu</span>}
-                  {isOverdue && <span className="badge badge-overdue">Quá thời hiệu</span>}
+                  {isUpcoming && (
+                    <span className="badge badge-upcoming" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <Clock size={11} />
+                      Sắp hết thời hiệu
+                    </span>
+                  )}
+                  {isOverdue && (
+                    <span className="badge badge-overdue" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <AlertTriangle size={11} />
+                      Quá thời hiệu
+                    </span>
+                  )}
                 </div>
               </div>
               <span className="point-time">{createdAt}</span>
