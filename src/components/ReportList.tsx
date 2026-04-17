@@ -106,6 +106,12 @@ export default function ReportList({ reports, onEdit, onDelete }: Props) {
               </p>
             )}
 
+            {report.ketQuaGiaiQuyet && (
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
+                Kết quả giải quyết: {report.ketQuaGiaiQuyet}
+              </p>
+            )}
+
             {report.ngayHetThoiHieuTruyCuuTNHS && (
               <p
                 style={{ fontSize: '0.82rem', marginBottom: 4 }}

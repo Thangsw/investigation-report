@@ -10,6 +10,7 @@ export interface Report {
   trichYeu: string;
   doi: 'Đội 2' | 'Đội 3' | 'Đội 4';
   tinhTrang: string;
+  ketQuaGiaiQuyet: string;
   ngayHetThoiHieuTruyCuuTNHS: string; // YYYY-MM-DD
   tinhChatMucDoNghiemTrong: string;
   khoKhan: string;

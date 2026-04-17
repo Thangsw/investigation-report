@@ -19,6 +19,7 @@ const EMPTY_FORM: ReportFormData = {
   trichYeu: '',
   doi: 'Đội 2',
   tinhTrang: '',
+  ketQuaGiaiQuyet: '',
   ngayHetThoiHieuTruyCuuTNHS: '',
   tinhChatMucDoNghiemTrong: '',
   khoKhan: '',
@@ -56,6 +57,7 @@ export default function ReportForm({
         trichYeu: editingReport.trichYeu || '',
         doi: editingReport.doi,
         tinhTrang: editingReport.tinhTrang,
+        ketQuaGiaiQuyet: editingReport.ketQuaGiaiQuyet || '',
         ngayHetThoiHieuTruyCuuTNHS: editingReport.ngayHetThoiHieuTruyCuuTNHS,
         tinhChatMucDoNghiemTrong: editingReport.tinhChatMucDoNghiemTrong || '',
         khoKhan: editingReport.khoKhan,
@@ -264,6 +266,18 @@ export default function ReportForm({
           <option value="Tạm đình chỉ điều tra" />
           <option value="Chờ kết luận giám định" />
         </datalist>
+      </div>
+
+      <div className="form-group">
+        <label>Kết quả giải quyết</label>
+        <input
+          type="text"
+          className="form-control"
+          value={form.ketQuaGiaiQuyet}
+          onChange={(event) => setField('ketQuaGiaiQuyet', event.target.value)}
+          placeholder="Nhập kết quả giải quyết..."
+          autoComplete="off"
+        />
       </div>
 
       <div className="form-group">
