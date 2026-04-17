@@ -27,6 +27,7 @@ interface Props {
 export default function ReportForm({ investigators, editingReport, prefillDTV, onSubmit, onCancel }: Props) {
   const [form, setForm] = useState<ReportFormData>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isAD = form.loaiHoSo === 'AD';
 
   useEffect(() => {
     if (editingReport) {
@@ -56,6 +57,10 @@ export default function ReportForm({ investigators, editingReport, prefillDTV, o
     e.preventDefault();
     if (!form.dtvName.trim()) {
       alert('Vui lòng nhập họ tên ĐTV');
+      return;
+    }
+    if (isAD && !form.thoiHanDinhChi) {
+      alert('Hồ sơ AD bắt buộc phải nhập Thời hạn đình chỉ');
       return;
     }
     const data: ReportFormData = {
@@ -213,13 +218,17 @@ export default function ReportForm({ investigators, editingReport, prefillDTV, o
 
       {/* 8. Thời hạn ra quyết định đình chỉ */}
       <div className="form-group">
-        <label>Thời hạn ra quyết định đình chỉ</label>
+        <label>{isAD ? 'Thời hạn đình chỉ *' : 'Thời hạn đình chỉ'}</label>
         <input
           type="date"
           className="form-control"
           value={form.thoiHanDinhChi}
           onChange={e => set('thoiHanDinhChi', e.target.value)}
+          required={isAD}
         />
+        <div className="field-note">
+          {isAD ? 'Hồ sơ AD bắt buộc phải nhập thời hạn đình chỉ.' : 'Hồ sơ AK có thể để trống.'}
+        </div>
       </div>
 
       {/* 9. Khó khăn, vướng mắc, đề xuất */}

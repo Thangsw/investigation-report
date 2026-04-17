@@ -102,6 +102,14 @@ body {
   margin-bottom: 20px;
 }
 
+.stats-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.stats-grid-5 {
+  grid-template-columns: repeat(5, 1fr);
+}
+
 .stat-card {
   padding: 16px;
   border-radius: 16px;
@@ -123,6 +131,13 @@ body {
   font-size: 0.78rem;
   color: #888;
   margin-top: 6px;
+}
+
+.stat-subtext {
+  font-size: 0.74rem;
+  color: #666;
+  margin-top: 4px;
+  line-height: 1.4;
 }
 
 .stat-bar-row {
@@ -176,6 +191,7 @@ body {
 .badge-ak      { background: rgba(52,152,219,0.2); color: #3498db; border: 1px solid rgba(52,152,219,0.35); }
 .badge-ad      { background: rgba(243,156,18,0.2);  color: #f39c12; border: 1px solid rgba(243,156,18,0.35); }
 .badge-doi     { background: rgba(46,213,115,0.2);  color: #2ed573; border: 1px solid rgba(46,213,115,0.35); }
+.badge-upcoming { background: rgba(255,159,67,0.2); color: #ff9f43; border: 1px solid rgba(255,159,67,0.35); }
 .badge-overdue { background: rgba(255,71,87,0.2);   color: #ff4757; border: 1px solid rgba(255,71,87,0.35); }
 
 /* ── Radio Group ─────────────────────────────────────────────────────────────── */
@@ -382,6 +398,12 @@ body {
 
 .form-control:focus { border-color: #ff4757; }
 
+.field-note {
+  font-size: 0.76rem;
+  color: #7f8c8d;
+  line-height: 1.4;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -560,9 +582,27 @@ body {
   letter-spacing: 1px;
 }
 
+.summary-text {
+  color: #ddd;
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.summary-note {
+  color: #888;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin-top: 10px;
+}
+
 /* ── Overdue highlight ───────────────────────────────────────────────────────── */
 .text-overdue {
   color: #ff4757 !important;
+  font-weight: 600;
+}
+
+.text-upcoming {
+  color: #ff9f43 !important;
   font-weight: 600;
 }
 
@@ -588,4 +628,7 @@ body {
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .form-row { grid-template-columns: 1fr 1fr; }
   .nav-links a { padding: 6px 10px; font-size: 0.8rem; }
+  .summary-text { font-size: 0.88rem; }
+  .stats-grid-3,
+  .stats-grid-5 { grid-template-columns: repeat(2, 1fr); }
 }

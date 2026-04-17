@@ -1,17 +1,11 @@
 import { Edit, Trash2 } from 'lucide-react';
 import type { Report } from '../types';
+import { getDaysUntilDeadline, getDeadlineStatus } from '../reportMetrics';
 
 interface Props {
   reports: Report[];
   onEdit?: (report: Report) => void;
   onDelete?: (id: string) => void;
-}
-
-function isOverdue(dateStr: string): boolean {
-  if (!dateStr) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return new Date(dateStr + 'T00:00:00') < today;
 }
 
 function formatDate(dateStr: string): string {
@@ -28,7 +22,10 @@ export default function ReportList({ reports, onEdit, onDelete }: Props) {
   return (
     <div className="point-list">
       {reports.map((r, idx) => {
-        const overdue = isOverdue(r.thoiHanDinhChi);
+        const deadlineStatus = getDeadlineStatus(r.thoiHanDinhChi);
+        const isUpcoming = deadlineStatus === 'upcoming';
+        const isOverdue = deadlineStatus === 'overdue';
+        const daysUntilDeadline = getDaysUntilDeadline(r.thoiHanDinhChi);
         const createdAt = new Date(r.createdAt).toLocaleDateString('vi-VN');
 
         return (
@@ -39,7 +36,8 @@ export default function ReportList({ reports, onEdit, onDelete }: Props) {
                 <div className="point-item-badges">
                   <span className={`badge badge-${r.loaiHoSo.toLowerCase()}`}>{r.loaiHoSo}</span>
                   <span className="badge badge-doi">{r.doi}</span>
-                  {overdue && <span className="badge badge-overdue">Quá hạn</span>}
+                  {isUpcoming && <span className="badge badge-upcoming">Sắp đến hạn</span>}
+                  {isOverdue && <span className="badge badge-overdue">Quá hạn</span>}
                 </div>
               </div>
               <span className="point-time">{createdAt}</span>
@@ -75,9 +73,14 @@ export default function ReportList({ reports, onEdit, onDelete }: Props) {
 
             {r.thoiHanDinhChi && (
               <p style={{ fontSize: '0.82rem', marginBottom: 4 }}
-                 className={overdue ? 'text-overdue' : ''}>
+                 className={isOverdue ? 'text-overdue' : (isUpcoming ? 'text-upcoming' : '')}>
                 Hạn đình chỉ: {formatDate(r.thoiHanDinhChi)}
-                {overdue && ' ⚠️'}
+                {isUpcoming && daysUntilDeadline !== null && (
+                  daysUntilDeadline === 0
+                    ? ' (đến hạn hôm nay)'
+                    : ` (còn ${daysUntilDeadline} ngày)`
+                )}
+                {isOverdue && daysUntilDeadline !== null && ` (quá ${Math.abs(daysUntilDeadline)} ngày)`}
               </p>
             )}
 

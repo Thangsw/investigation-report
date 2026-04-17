@@ -1,78 +1,129 @@
 import type { Report } from '../types';
+import { EXTRACTED_CASE_TARGET, TOTAL_CASE_TARGET, getDashboardMetrics } from '../reportMetrics';
 
 interface Props {
   reports: Report[];
 }
 
 export default function StatsCards({ reports }: Props) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const akCount = reports.filter(r => r.loaiHoSo === 'AK').length;
-  const adCount = reports.filter(r => r.loaiHoSo === 'AD').length;
-  const overdueCount = reports.filter(r => {
-    if (!r.thoiHanDinhChi) return false;
-    return new Date(r.thoiHanDinhChi + 'T00:00:00') < today;
-  }).length;
-
-  // Count by ĐTV
-  const byDTV: Record<string, number> = {};
-  reports.forEach(r => {
-    byDTV[r.dtvName] = (byDTV[r.dtvName] || 0) + 1;
-  });
-  const dtvEntries = Object.entries(byDTV).sort((a, b) => b[1] - a[1]);
+  const metrics = getDashboardMetrics(reports);
+  const dtvEntries = Object.entries(metrics.byDTV).sort((a, b) => b[1] - a[1]);
   const maxDTV = dtvEntries[0]?.[1] || 1;
-
-  // Count by Đội
-  const doi2 = reports.filter(r => r.doi === 'Đội 2').length;
-  const doi3 = reports.filter(r => r.doi === 'Đội 3').length;
-  const doi4 = reports.filter(r => r.doi === 'Đội 4').length;
+  const completionRateLabel = `${metrics.completionRate.toFixed(1)}%`;
+  const extractionRateLabel = `${metrics.extractionRate.toFixed(1)}%`;
 
   return (
     <>
-      {/* Row 1: 4 stat cards */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-        <div className="stat-card glass-panel">
-          <div className="stat-value">{reports.length}</div>
-          <div className="stat-label">Tổng hồ sơ</div>
-        </div>
-        <div className="stat-card glass-panel">
-          <div className="stat-value blue">{akCount}</div>
-          <div className="stat-label">Hồ sơ AK</div>
-        </div>
-        <div className="stat-card glass-panel">
-          <div className="stat-value amber">{adCount}</div>
-          <div className="stat-label">Hồ sơ AD</div>
-        </div>
-        <div className="stat-card glass-panel">
-          <div className="stat-value" style={{ color: overdueCount > 0 ? '#ff4757' : '#2ed573' }}>
-            {overdueCount}
+      <div className="section-card glass-panel">
+        <div className="section-title" style={{ marginBottom: 12 }}>Khối lượng bộ phận tổng hợp</div>
+        <div className="stats-grid stats-grid-3" style={{ marginBottom: 0 }}>
+          <div className="stat-card">
+            <div className="stat-value">{TOTAL_CASE_TARGET}</div>
+            <div className="stat-label">Cần rút</div>
+            <div className="stat-subtext">Tổng hồ sơ cần rút theo kế hoạch</div>
           </div>
-          <div className="stat-label">Quá hạn đình chỉ</div>
+          <div className="stat-card">
+            <div className="stat-value blue">{EXTRACTED_CASE_TARGET}</div>
+            <div className="stat-label">Đã rút</div>
+            <div className="stat-subtext">Đã đưa vào luồng xử lý của đơn vị</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value amber">{metrics.remainingToExtract}</div>
+            <div className="stat-label">Còn lại</div>
+            <div className="stat-subtext">Chưa rút so với kế hoạch chung</div>
+          </div>
         </div>
       </div>
 
-      {/* Row 2: by Đội */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 16 }}>
-        <div className="stat-card glass-panel">
-          <div className="stat-value green">{doi2}</div>
-          <div className="stat-label">Đội 2</div>
-        </div>
-        <div className="stat-card glass-panel">
-          <div className="stat-value green">{doi3}</div>
-          <div className="stat-label">Đội 3</div>
-        </div>
-        <div className="stat-card glass-panel">
-          <div className="stat-value green">{doi4}</div>
-          <div className="stat-label">Đội 4</div>
+      <div className="section-card glass-panel">
+        <div className="section-title" style={{ marginBottom: 12 }}>Tiến độ thực hiện của đơn vị</div>
+        <div className="stats-grid stats-grid-3" style={{ marginBottom: 0 }}>
+          <div className="stat-card">
+            <div className="stat-value">{metrics.completedCount}</div>
+            <div className="stat-label">Đã làm / đã báo cáo</div>
+            <div className="stat-subtext">Số hồ sơ ĐTV đã nhập hoặc cập nhật</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value green">{completionRateLabel}</div>
+            <div className="stat-label">Tỷ lệ thực hiện</div>
+            <div className="stat-subtext">Trên {EXTRACTED_CASE_TARGET} hồ sơ đã rút</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value blue">{metrics.remainingToReport}</div>
+            <div className="stat-label">Chưa báo cáo</div>
+            <div className="stat-subtext">Đã rút nhưng chưa thấy ĐTV cập nhật</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value amber">{metrics.reassignedCount}</div>
+            <div className="stat-label">Đã phân công lại</div>
+            <div className="stat-subtext">Dựa trên tình trạng hiện tại</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value amber">{metrics.upcomingDeadlineCount}</div>
+            <div className="stat-label">Sắp đến hạn đình chỉ</div>
+            <div className="stat-subtext">Hồ sơ còn tối đa 30 ngày tới hạn</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: metrics.overdueDeadlineCount > 0 ? '#ff4757' : '#2ed573' }}>
+              {metrics.overdueDeadlineCount}
+            </div>
+            <div className="stat-label">Quá hạn đình chỉ</div>
+            <div className="stat-subtext">Cần ưu tiên cảnh báo và xử lý</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value" style={{ color: metrics.difficultyCount > 0 ? '#ff9f43' : '#2ed573' }}>
+              {metrics.difficultyCount}
+            </div>
+            <div className="stat-label">Khó khăn / vướng mắc</div>
+            <div className="stat-subtext">Hồ sơ có ghi nhận đề xuất hoặc vướng mắc</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value blue">{extractionRateLabel}</div>
+            <div className="stat-label">Tỷ lệ đã rút</div>
+            <div className="stat-subtext">Trên {TOTAL_CASE_TARGET} hồ sơ cần rút</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value amber">{metrics.adCount}</div>
+            <div className="stat-label">Hồ sơ AD</div>
+            <div className="stat-subtext">Nhóm cần theo dõi thời hạn đình chỉ</div>
+          </div>
         </div>
       </div>
 
-      {/* ĐTV breakdown */}
-      {dtvEntries.length > 0 && (
-        <div className="section-card glass-panel" style={{ marginBottom: 16 }}>
-          <div className="section-title" style={{ marginBottom: 12 }}>Thống kê theo ĐTV</div>
-          {dtvEntries.map(([name, count]) => (
+      <div className="section-card glass-panel">
+        <div className="section-title" style={{ marginBottom: 12 }}>Phân bố hồ sơ đã cập nhật</div>
+        <div className="stats-grid stats-grid-5" style={{ marginBottom: 0 }}>
+          <div className="stat-card">
+            <div className="stat-value blue">{metrics.akCount}</div>
+            <div className="stat-label">AK</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value amber">{metrics.adCount}</div>
+            <div className="stat-label">AD</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value green">{metrics.byDoi['Đội 2']}</div>
+            <div className="stat-label">Đội 2</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value green">{metrics.byDoi['Đội 3']}</div>
+            <div className="stat-label">Đội 3</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value green">{metrics.byDoi['Đội 4']}</div>
+            <div className="stat-label">Đội 4</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="section-card glass-panel">
+        <div className="section-title" style={{ marginBottom: 12 }}>Phân bổ theo ĐTV</div>
+        {dtvEntries.length === 0 ? (
+          <div className="empty-state" style={{ padding: '8px 0 0' }}>
+            Chưa có hồ sơ nào được ĐTV cập nhật.
+          </div>
+        ) : (
+          dtvEntries.map(([name, count]) => (
             <div key={name} className="stat-bar-row">
               <span className="bar-name">{name}</span>
               <div className="stat-bar-track">
@@ -83,9 +134,9 @@ export default function StatsCards({ reports }: Props) {
               </div>
               <span className="stat-bar-count">{count}</span>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </>
   );
 }

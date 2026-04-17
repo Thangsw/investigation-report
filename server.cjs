@@ -49,7 +49,7 @@ app.get('/api/reports/export', (req, res) => {
         'STT', 'Họ tên ĐTV', 'Người cầm hồ sơ', 'Loại hồ sơ',
         'Số tập', 'Số hồ sơ', 'Số lưu', 'Trích yếu',
         'Hồ sơ thuộc lĩnh vực', 'Tình trạng hiện tại',
-        'Thời hạn ra QĐ đình chỉ', 'Khó khăn/Vướng mắc/Đề xuất', 'Ngày tạo'
+        'Thời hạn đình chỉ', 'Khó khăn/Vướng mắc/Đề xuất', 'Ngày tạo'
       ],
       ...reports.map((r, i) => [
         i + 1,
@@ -104,9 +104,13 @@ app.post('/api/reports', (req, res) => {
   try {
     const reports = readReports();
     const b = req.body;
+    const thoiHanDinhChi = b.thoiHanDinhChi || '';
 
     if (!b.dtvName || !b.loaiHoSo || !b.doi) {
       return res.status(400).json({ error: 'Thiếu trường bắt buộc: dtvName, loaiHoSo, doi' });
+    }
+    if (b.loaiHoSo === 'AD' && !thoiHanDinhChi) {
+      return res.status(400).json({ error: 'Hồ sơ AD bắt buộc phải có thời hạn đình chỉ' });
     }
 
     const now = new Date().toISOString();
@@ -121,7 +125,7 @@ app.post('/api/reports', (req, res) => {
       trichYeu:        b.trichYeu        || '',
       doi:             b.doi,
       tinhTrang:       b.tinhTrang       || '',
-      thoiHanDinhChi:  b.thoiHanDinhChi  || '',
+      thoiHanDinhChi,
       khoKhan:         b.khoKhan         || '',
       createdAt:       now,
       updatedAt:       now,
@@ -144,19 +148,25 @@ app.put('/api/reports/:id', (req, res) => {
 
     const b = req.body;
     const existing = reports[idx];
+    const nextLoaiHoSo = b.loaiHoSo ?? existing.loaiHoSo;
+    const nextThoiHanDinhChi = b.thoiHanDinhChi ?? existing.thoiHanDinhChi;
+
+    if (nextLoaiHoSo === 'AD' && !nextThoiHanDinhChi) {
+      return res.status(400).json({ error: 'Hồ sơ AD bắt buộc phải có thời hạn đình chỉ' });
+    }
 
     const updated = {
       ...existing,
       dtvName:        b.dtvName        ?? existing.dtvName,
       nguoiCamHoSo:   (b.nguoiCamHoSo?.trim()) || (b.dtvName ?? existing.dtvName),
-      loaiHoSo:       b.loaiHoSo       ?? existing.loaiHoSo,
+      loaiHoSo:       nextLoaiHoSo,
       soTap:          b.soTap          ?? existing.soTap,
       soHoSo:         b.soHoSo         ?? existing.soHoSo,
       soLuu:          b.soLuu          ?? existing.soLuu,
       trichYeu:       b.trichYeu       ?? existing.trichYeu ?? '',
       doi:            b.doi            ?? existing.doi,
       tinhTrang:      b.tinhTrang      ?? existing.tinhTrang,
-      thoiHanDinhChi: b.thoiHanDinhChi ?? existing.thoiHanDinhChi,
+      thoiHanDinhChi: nextThoiHanDinhChi,
       khoKhan:        b.khoKhan        ?? existing.khoKhan,
       updatedAt:      new Date().toISOString(),
     };
