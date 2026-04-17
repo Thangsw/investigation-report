@@ -20,17 +20,14 @@ export default function StatsCards({ reports }: Props) {
           <div className="stat-card">
             <div className="stat-value">{TOTAL_CASE_TARGET}</div>
             <div className="stat-label">Cần rút</div>
-            <div className="stat-subtext">Tổng hồ sơ cần rút theo kế hoạch</div>
           </div>
           <div className="stat-card">
             <div className="stat-value blue">{EXTRACTED_CASE_TARGET}</div>
             <div className="stat-label">Đã rút</div>
-            <div className="stat-subtext">Đã đưa vào luồng xử lý của đơn vị</div>
           </div>
           <div className="stat-card">
             <div className="stat-value amber">{metrics.remainingToExtract}</div>
             <div className="stat-label">Còn lại</div>
-            <div className="stat-subtext">Chưa rút so với kế hoạch chung</div>
           </div>
         </div>
       </div>
@@ -41,51 +38,42 @@ export default function StatsCards({ reports }: Props) {
           <div className="stat-card">
             <div className="stat-value">{metrics.completedCount}</div>
             <div className="stat-label">Đã làm / đã báo cáo</div>
-            <div className="stat-subtext">Số hồ sơ ĐTV đã nhập hoặc cập nhật</div>
           </div>
           <div className="stat-card">
             <div className="stat-value green">{completionRateLabel}</div>
             <div className="stat-label">Tỷ lệ thực hiện</div>
-            <div className="stat-subtext">Trên {EXTRACTED_CASE_TARGET} hồ sơ đã rút</div>
           </div>
           <div className="stat-card">
             <div className="stat-value blue">{metrics.remainingToReport}</div>
             <div className="stat-label">Chưa báo cáo</div>
-            <div className="stat-subtext">Đã rút nhưng chưa thấy ĐTV cập nhật</div>
           </div>
           <div className="stat-card">
             <div className="stat-value amber">{metrics.reassignedCount}</div>
             <div className="stat-label">Đã phân công lại</div>
-            <div className="stat-subtext">Dựa trên tình trạng hiện tại</div>
           </div>
           <div className="stat-card">
             <div className="stat-value amber">{metrics.upcomingDeadlineCount}</div>
             <div className="stat-label">Sắp đến hạn đình chỉ</div>
-            <div className="stat-subtext">Hồ sơ còn tối đa 30 ngày tới hạn</div>
           </div>
           <div className="stat-card">
             <div className="stat-value" style={{ color: metrics.overdueDeadlineCount > 0 ? '#ff4757' : '#2ed573' }}>
               {metrics.overdueDeadlineCount}
             </div>
             <div className="stat-label">Quá hạn đình chỉ</div>
-            <div className="stat-subtext">Cần ưu tiên cảnh báo và xử lý</div>
           </div>
           <div className="stat-card">
             <div className="stat-value" style={{ color: metrics.difficultyCount > 0 ? '#ff9f43' : '#2ed573' }}>
               {metrics.difficultyCount}
             </div>
             <div className="stat-label">Khó khăn / vướng mắc</div>
-            <div className="stat-subtext">Hồ sơ có ghi nhận đề xuất hoặc vướng mắc</div>
           </div>
           <div className="stat-card">
             <div className="stat-value blue">{extractionRateLabel}</div>
             <div className="stat-label">Tỷ lệ đã rút</div>
-            <div className="stat-subtext">Trên {TOTAL_CASE_TARGET} hồ sơ cần rút</div>
           </div>
           <div className="stat-card">
             <div className="stat-value amber">{metrics.adCount}</div>
             <div className="stat-label">Hồ sơ AD</div>
-            <div className="stat-subtext">Nhóm cần theo dõi thời hạn đình chỉ</div>
           </div>
         </div>
       </div>

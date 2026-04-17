@@ -7,7 +7,7 @@ const XLSX = require('xlsx');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const DATA_DIR = process.env.DATA_DIR || __dirname;
+const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
 const reportsFile      = path.join(DATA_DIR, 'reports.json');
 const investigatorsFile = path.join(DATA_DIR, 'investigators.json');
 

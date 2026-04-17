@@ -133,13 +133,6 @@ body {
   margin-top: 6px;
 }
 
-.stat-subtext {
-  font-size: 0.74rem;
-  color: #666;
-  margin-top: 4px;
-  line-height: 1.4;
-}
-
 .stat-bar-row {
   display: flex;
   align-items: center;
@@ -582,19 +575,6 @@ body {
   letter-spacing: 1px;
 }
 
-.summary-text {
-  color: #ddd;
-  font-size: 0.92rem;
-  line-height: 1.65;
-}
-
-.summary-note {
-  color: #888;
-  font-size: 0.8rem;
-  line-height: 1.5;
-  margin-top: 10px;
-}
-
 /* ── Overdue highlight ───────────────────────────────────────────────────────── */
 .text-overdue {
   color: #ff4757 !important;
@@ -628,7 +608,6 @@ body {
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .form-row { grid-template-columns: 1fr 1fr; }
   .nav-links a { padding: 6px 10px; font-size: 0.8rem; }
-  .summary-text { font-size: 0.88rem; }
   .stats-grid-3,
   .stats-grid-5 { grid-template-columns: repeat(2, 1fr); }
 }

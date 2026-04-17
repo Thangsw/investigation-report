@@ -5,7 +5,6 @@ import StatsCards from '../components/StatsCards';
 import FilterBar from '../components/FilterBar';
 import ReportList from '../components/ReportList';
 import ExportButton from '../components/ExportButton';
-import { EXTRACTED_CASE_TARGET, TOTAL_CASE_TARGET } from '../reportMetrics';
 
 interface Filters {
   dtvName: string;
@@ -45,18 +44,6 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="section-card glass-panel">
-        <div className="section-title" style={{ marginBottom: 10 }}>Vai trò phần mềm</div>
-        <p className="summary-text">
-          Bộ phận tổng hợp phải rút {TOTAL_CASE_TARGET} hồ sơ, hiện đã rút {EXTRACTED_CASE_TARGET} hồ sơ để phân cho ĐTV thực hiện.
-          ĐTV dùng nút "Thêm hồ sơ" để cập nhật tình trạng xử lý, thời hạn đình chỉ và khó khăn vướng mắc của từng hồ sơ.
-          Màn hình này là báo cáo tổng hợp để lãnh đạo theo dõi tiến độ toàn đơn vị.
-        </p>
-        <p className="summary-note">
-          Cách hiểu hiện tại: "Đã làm / đã báo cáo" là số hồ sơ ĐTV đã nhập hoặc cập nhật trên hệ thống.
-        </p>
-      </div>
-
       <div className="section-header" style={{ marginBottom: 12 }}>
         <span className="section-title">Báo cáo lãnh đạo</span>
         <ExportButton />

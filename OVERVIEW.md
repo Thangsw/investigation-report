@@ -75,15 +75,15 @@ investigation-report/
 
 **Cách tracking-map làm (phải áp dụng cho project này):**
 - Tạo Volume trong Railway dashboard → mount vào `/data`
-- Thêm env var `DATA_DIR=/data` trong service
-- `server.cjs` đã sẵn sàng: `const DATA_DIR = process.env.DATA_DIR || __dirname`
+- Có thể thêm env var `DATA_DIR=/data` trong service
+- `server.cjs` đã sẵn sàng: ưu tiên `DATA_DIR`, nếu không có sẽ tự dùng `RAILWAY_VOLUME_MOUNT_PATH`, cuối cùng mới fallback về `__dirname`
 
 **Trạng thái hiện tại**: chưa có Volume → dữ liệu mất khi restart service.
 
 **Cách setup** (qua Railway dashboard):
 1. Vào service `investigation-report` → tab **Volumes**
 2. **New Volume** → Mount path: `/data`
-3. Vào tab **Variables** → thêm `DATA_DIR` = `/data`
+3. Vào tab **Variables** → có thể thêm `DATA_DIR` = `/data` (không bắt buộc nếu dùng trực tiếp `RAILWAY_VOLUME_MOUNT_PATH`)
 4. Redeploy
 
 ---
