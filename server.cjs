@@ -51,7 +51,37 @@ const readReports = () => {
 
 const writeReports = (data) => {
   fs.writeFileSync(reportsFile, JSON.stringify(data.map(normalizeReport), null, 2));
+  syncToGoogleSheets(data).catch(() => {}); // fire-and-forget, không chặn response
 };
+
+// ── Google Sheets backup (qua Apps Script web app) ────────────────────────────
+// Đặt GOOGLE_SHEETS_WEBHOOK_URL trong Railway Variables để bật tính năng này.
+const SHEETS_WEBHOOK = process.env.GOOGLE_SHEETS_WEBHOOK_URL || '';
+
+function syncToGoogleSheets(reports) {
+  if (!SHEETS_WEBHOOK) return Promise.resolve();
+  const url = new URL(SHEETS_WEBHOOK);
+  const body = JSON.stringify({ reports });
+  const options = {
+    hostname: url.hostname,
+    path: url.pathname + url.search,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body, 'utf8'),
+    },
+  };
+  const lib = url.protocol === 'https:' ? require('https') : require('http');
+  return new Promise((resolve) => {
+    const req = lib.request(options, (res) => {
+      res.on('data', () => {});
+      res.on('end', resolve);
+    });
+    req.on('error', resolve);
+    req.write(body);
+    req.end();
+  });
+}
 
 const readInvestigators = () => {
   if (!fs.existsSync(investigatorsFile)) return [];

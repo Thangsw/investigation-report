@@ -3,12 +3,18 @@ import { Send } from 'lucide-react';
 import type { Report, Investigator, ReportFormData } from '../types';
 
 const SEVERITY_PRESETS = [
-  'Rất nghiêm trọng',
   'Ít nghiêm trọng',
+  'Nghiêm trọng',
+  'Rất nghiêm trọng',
   'Đặc biệt nghiêm trọng',
 ] as const;
 
-const EMPTY_FORM: ReportFormData = {
+// FormState cho phép toBanDia = '' (chưa chọn)
+type FormState = Omit<ReportFormData, 'toBanDia'> & {
+  toBanDia: 'Hoà Bình' | 'Lạc Thuỷ' | '';
+};
+
+const EMPTY_FORM: FormState = {
   dtvName: '',
   nguoiCamHoSo: '',
   loaiHoSo: 'AK',
@@ -18,13 +24,29 @@ const EMPTY_FORM: ReportFormData = {
   hoSoHienHanh: false,
   trichYeu: '',
   doi: 'Đội 2',
-  toBanDia: 'Hoà Bình',
+  toBanDia: '',
   tinhTrang: '',
   ketQuaGiaiQuyet: '',
   ngayHetThoiHieuTruyCuuTNHS: '',
   tinhChatMucDoNghiemTrong: '',
   khoKhan: '',
 };
+
+function hasLocationKeyword(text: string): boolean {
+  const t = text.toLowerCase().normalize('NFC');
+  return (
+    t.includes('phường') ||
+    t.includes('phuong') ||
+    t.includes('xã ') ||
+    t.includes(' xã') ||
+    t.startsWith('xã') ||
+    t.includes('thị trấn') ||
+    t.includes('thi tran') ||
+    t.includes('thôn') ||
+    t.includes('huyện') ||
+    t.includes('quận')
+  );
+}
 
 interface Props {
   investigators: Investigator[];
@@ -41,10 +63,12 @@ export default function ReportForm({
   onSubmit,
   onCancel,
 }: Props) {
-  const [form, setForm] = useState<ReportFormData>(EMPTY_FORM);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
+    setSubmitted(false);
     if (editingReport) {
       setForm({
         dtvName: editingReport.dtvName,
@@ -56,7 +80,7 @@ export default function ReportForm({
         hoSoHienHanh: editingReport.hoSoHienHanh,
         trichYeu: editingReport.trichYeu || '',
         doi: editingReport.doi,
-        toBanDia: editingReport.toBanDia ?? 'Hoà Bình',
+        toBanDia: editingReport.toBanDia ?? '',
         tinhTrang: editingReport.tinhTrang,
         ketQuaGiaiQuyet: editingReport.ketQuaGiaiQuyet || '',
         ngayHetThoiHieuTruyCuuTNHS: editingReport.ngayHetThoiHieuTruyCuuTNHS,
@@ -68,56 +92,40 @@ export default function ReportForm({
     }
   }, [editingReport, prefillDTV]);
 
-  const setField = <K extends keyof ReportFormData>(key: K, value: ReportFormData[K]) => {
+  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  // Inline validation
+  const trichYeuInvalid =
+    submitted &&
+    form.trichYeu.trim().length > 0 &&
+    !hasLocationKeyword(form.trichYeu);
+
+  const toBanDiaInvalid = submitted && !form.toBanDia;
+  const soHoSoInvalid = submitted && !form.soHoSo.trim();
+  const tinhChatInvalid = submitted && !form.tinhChatMucDoNghiemTrong.trim();
+  const ngayInvalid = submitted && !form.ngayHetThoiHieuTruyCuuTNHS;
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setSubmitted(true);
 
-    if (!form.dtvName.trim()) {
-      alert('Vui lòng nhập họ tên ĐTV');
-      return;
-    }
+    if (!form.dtvName.trim()) { alert('Vui lòng nhập họ tên ĐTV'); return; }
+    if (!form.soHoSo.trim()) return;
+    if (!form.tinhChatMucDoNghiemTrong.trim()) return;
+    if (!form.ngayHetThoiHieuTruyCuuTNHS) return;
+    if (!form.toBanDia) return;
 
-    if (!form.soHoSo.trim()) {
-      alert('Vui lòng nhập Số hồ sơ');
-      return;
-    }
-
-    if (!form.tinhChatMucDoNghiemTrong.trim()) {
-      alert('Vui lòng nhập Tính chất, mức độ nghiêm trọng');
-      return;
-    }
-
-    if (!form.ngayHetThoiHieuTruyCuuTNHS) {
-      alert('Vui lòng nhập Ngày hết thời hiệu truy cứu TNHS');
-      return;
-    }
-
-    // Soft warning nếu trích yếu không có địa danh
-    if (form.trichYeu.trim()) {
-      const lower = form.trichYeu.toLowerCase().normalize('NFC');
-      const hasLocation =
-        lower.includes('phường') ||
-        lower.includes('phuong') ||
-        lower.includes('xã') ||
-        lower.includes('xa ') ||
-        lower.includes('thị trấn') ||
-        lower.includes('thi tran');
-      if (!hasLocation) {
-        const proceed = window.confirm(
-          'Trích yếu chưa có địa danh cụ thể (phường/xã/thị trấn).\n\nVí dụ đúng: "Vụ lừa đảo xảy ra ngày 01/01/2024 tại phường Hoà Bình, tp. Hoà Bình"\n\nBạn có muốn tiếp tục lưu không?',
-        );
-        if (!proceed) return;
-      }
-    }
+    // Block nếu trích yếu không có địa danh
+    if (form.trichYeu.trim() && !hasLocationKeyword(form.trichYeu)) return;
 
     const data: ReportFormData = {
-      ...form,
+      ...(form as ReportFormData),
       dtvName: form.dtvName.trim(),
       nguoiCamHoSo: form.nguoiCamHoSo.trim() || form.dtvName.trim(),
       tinhChatMucDoNghiemTrong: form.tinhChatMucDoNghiemTrong.trim(),
+      toBanDia: form.toBanDia as 'Hoà Bình' | 'Lạc Thuỷ',
     };
 
     setIsSubmitting(true);
@@ -128,8 +136,15 @@ export default function ReportForm({
     }
   };
 
+  const errStyle: React.CSSProperties = {
+    fontSize: '0.76rem',
+    color: '#ff4757',
+    marginTop: 2,
+  };
+
   return (
     <form onSubmit={handleSubmit}>
+      {/* Họ tên ĐTV */}
       <div className="form-group">
         <label>Họ tên ĐTV</label>
         <input
@@ -137,18 +152,16 @@ export default function ReportForm({
           className="form-control"
           list="dtv-datalist"
           value={form.dtvName}
-          onChange={(event) => setField('dtvName', event.target.value)}
+          onChange={(e) => setField('dtvName', e.target.value)}
           placeholder="Nhập tên ĐTV..."
           autoComplete="off"
-          required
         />
         <datalist id="dtv-datalist">
-          {investigators.map((investigator) => (
-            <option key={investigator.id} value={investigator.name} />
-          ))}
+          {investigators.map((inv) => <option key={inv.id} value={inv.name} />)}
         </datalist>
       </div>
 
+      {/* Người cầm */}
       <div className="form-group">
         <label>Người cầm hồ sơ</label>
         <input
@@ -156,12 +169,13 @@ export default function ReportForm({
           className="form-control"
           list="dtv-datalist"
           value={form.nguoiCamHoSo}
-          onChange={(event) => setField('nguoiCamHoSo', event.target.value)}
+          onChange={(e) => setField('nguoiCamHoSo', e.target.value)}
           placeholder={`Để trống → tự điền "${form.dtvName || 'tên ĐTV'}"`}
           autoComplete="off"
         />
       </div>
 
+      {/* Loại hồ sơ */}
       <div className="form-group">
         <label>Loại hồ sơ</label>
         <div className="radio-group">
@@ -183,70 +197,58 @@ export default function ReportForm({
         </div>
       </div>
 
+      {/* Số tập / hồ sơ / lưu */}
       <div className="form-row">
         <div className="form-group">
           <label>Số tập</label>
-          <input
-            type="text"
-            className="form-control"
-            value={form.soTap}
-            onChange={(event) => setField('soTap', event.target.value)}
-          />
+          <input type="text" className="form-control" value={form.soTap}
+            onChange={(e) => setField('soTap', e.target.value)} />
         </div>
         <div className="form-group">
           <label>Số hồ sơ *</label>
-          <input
-            type="text"
-            className="form-control"
-            value={form.soHoSo}
-            onChange={(event) => setField('soHoSo', event.target.value)}
-          />
+          <input type="text" className="form-control" value={form.soHoSo}
+            onChange={(e) => setField('soHoSo', e.target.value)} />
+          {soHoSoInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
         </div>
         <div className="form-group">
           <label>Số lưu</label>
-          <input
-            type="text"
-            className="form-control"
-            value={form.soLuu}
-            onChange={(event) => setField('soLuu', event.target.value)}
-          />
+          <input type="text" className="form-control" value={form.soLuu}
+            onChange={(e) => setField('soLuu', e.target.value)} />
           <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={form.hoSoHienHanh}
-              onChange={(event) => setField('hoSoHienHanh', event.target.checked)}
-            />
+            <input type="checkbox" checked={form.hoSoHienHanh}
+              onChange={(e) => setField('hoSoHienHanh', e.target.checked)} />
             <span>Hồ sơ hiện hành</span>
           </label>
         </div>
       </div>
 
+      {/* Trích yếu */}
       <div className="form-group">
         <label>Trích yếu</label>
         <textarea
           className="form-control"
           rows={3}
           value={form.trichYeu}
-          onChange={(event) => setField('trichYeu', event.target.value)}
-          placeholder='Vụ [...] xảy ra ngày [...] tại [...], hoặc tóm tắt vụ việc — không ghi chung chung "Lừa đảo chiếm đoạt tài sản" hoặc "Giết người"'
+          onChange={(e) => setField('trichYeu', e.target.value)}
+          placeholder='Tóm tắt nội dung vụ án/vụ việc hoặc trích yếu hồ sơ, không ghi chung chung "Lừa đảo chiếm đoạt tài sản" hoặc "Giết người"'
         />
-        <p className="field-note">Cần có địa danh cụ thể (phường/xã/thị trấn) trong nội dung</p>
+        {trichYeuInvalid && (
+          <span style={errStyle}>Nhập đầy đủ thông tin (cần có địa danh: phường/xã/thị trấn/huyện)</span>
+        )}
       </div>
 
+      {/* Đội */}
       <div className="form-group">
         <label>Hồ sơ thuộc lĩnh vực của</label>
-        <select
-          className="form-control"
-          value={form.doi}
-          onChange={(event) => setField('doi', event.target.value as ReportFormData['doi'])}
-          required
-        >
+        <select className="form-control" value={form.doi}
+          onChange={(e) => setField('doi', e.target.value as ReportFormData['doi'])}>
           <option value="Đội 2">Đội 2</option>
           <option value="Đội 3">Đội 3</option>
           <option value="Đội 4">Đội 4</option>
         </select>
       </div>
 
+      {/* Tổ địa bàn */}
       <div className="form-group">
         <label>Tổ địa bàn *</label>
         <div className="radio-group">
@@ -269,18 +271,22 @@ export default function ReportForm({
             );
           })}
         </div>
+        {toBanDiaInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
       </div>
 
+      {/* Ngày hết thời hiệu */}
       <div className="form-group">
         <label>Ngày hết thời hiệu truy cứu TNHS *</label>
         <input
           type="date"
           className="form-control"
           value={form.ngayHetThoiHieuTruyCuuTNHS}
-          onChange={(event) => setField('ngayHetThoiHieuTruyCuuTNHS', event.target.value)}
+          onChange={(e) => setField('ngayHetThoiHieuTruyCuuTNHS', e.target.value)}
         />
+        {ngayInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
       </div>
 
+      {/* Tính chất */}
       <div className="form-group">
         <label>Tính chất, mức độ nghiêm trọng *</label>
         <input
@@ -288,17 +294,17 @@ export default function ReportForm({
           className="form-control"
           list="severity-datalist"
           value={form.tinhChatMucDoNghiemTrong}
-          onChange={(event) => setField('tinhChatMucDoNghiemTrong', event.target.value)}
-          placeholder="Rất nghiêm trọng / Ít nghiêm trọng / Đặc biệt nghiêm trọng..."
+          onChange={(e) => setField('tinhChatMucDoNghiemTrong', e.target.value)}
+          placeholder="nhập tay hoặc chọn"
           autoComplete="off"
         />
         <datalist id="severity-datalist">
-          {SEVERITY_PRESETS.map((severity) => (
-            <option key={severity} value={severity} />
-          ))}
+          {SEVERITY_PRESETS.map((s) => <option key={s} value={s} />)}
         </datalist>
+        {tinhChatInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
       </div>
 
+      {/* Tình trạng */}
       <div className="form-group">
         <label>Tình trạng hiện tại</label>
         <input
@@ -306,7 +312,7 @@ export default function ReportForm({
           className="form-control"
           list="tinhtrang-datalist"
           value={form.tinhTrang}
-          onChange={(event) => setField('tinhTrang', event.target.value)}
+          onChange={(e) => setField('tinhTrang', e.target.value)}
           placeholder="Đang xử lý / Đã ra quyết định không khởi tố / Đã phân công lại..."
           autoComplete="off"
         />
@@ -321,25 +327,27 @@ export default function ReportForm({
         </datalist>
       </div>
 
+      {/* Kết quả */}
       <div className="form-group">
         <label>Kết quả giải quyết</label>
         <input
           type="text"
           className="form-control"
           value={form.ketQuaGiaiQuyet}
-          onChange={(event) => setField('ketQuaGiaiQuyet', event.target.value)}
+          onChange={(e) => setField('ketQuaGiaiQuyet', e.target.value)}
           placeholder="Nhập kết quả giải quyết..."
           autoComplete="off"
         />
       </div>
 
+      {/* Khó khăn */}
       <div className="form-group">
         <label>Khó khăn, vướng mắc, đề xuất</label>
         <textarea
           className="form-control"
           rows={3}
           value={form.khoKhan}
-          onChange={(event) => setField('khoKhan', event.target.value)}
+          onChange={(e) => setField('khoKhan', e.target.value)}
           placeholder="Không tìm thấy trên phần mềm ĐTHS, Không có đầy đủ tài liệu v.v..."
         />
       </div>
