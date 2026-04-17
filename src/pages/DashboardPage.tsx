@@ -51,7 +51,7 @@ export default function DashboardPage() {
       <div className="dashboard-toolbar glass-panel">
         <div className="dashboard-title">BÁO CÁO TỔNG HỢP</div>
         <div className="dashboard-actions">
-          <Link to="/" className="btn-primary-cta">
+          <Link to="/reports" className="btn-primary-cta">
             Thêm hồ sơ đã làm
           </Link>
           <ExportButton />

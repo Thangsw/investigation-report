@@ -12,15 +12,16 @@ export default function App() {
           Quản lý Hồ sơ TĐC
         </div>
         <div className="nav-links">
-          <NavLink to="/" end>Nhập hồ sơ</NavLink>
-          <NavLink to="/dashboard">Tổng hợp</NavLink>
+          <NavLink to="/" end>Báo cáo tổng hợp</NavLink>
+          <NavLink to="/reports">Chỉnh sửa hồ sơ đã nhập</NavLink>
         </div>
       </nav>
 
       <main className="page-content">
         <Routes>
-          <Route path="/"          element={<ReportPage />} />
+          <Route path="/" element={<DashboardPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/reports" element={<ReportPage />} />
         </Routes>
       </main>
     </div>

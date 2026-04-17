@@ -83,6 +83,10 @@ export default function ReportPage() {
 
   return (
     <div style={{ position: 'relative' }}>
+      <div className="section-header" style={{ marginBottom: 12 }}>
+        <span className="section-title">Chỉnh sửa hồ sơ đã nhập</span>
+      </div>
+
       <div className="form-group" style={{ marginBottom: 14 }}>
         <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
           Lọc hồ sơ theo tên ĐTV (nhập tên bạn để chỉ xem hồ sơ của mình):
