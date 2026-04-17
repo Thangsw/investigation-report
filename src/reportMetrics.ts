@@ -71,10 +71,10 @@ export function getDashboardMetrics(reports: Report[]) {
   const reassignedCount = reports.filter(isReassignedReport).length;
   const difficultyCount = reports.filter(hasDifficulty).length;
   const upcomingDeadlineCount = reports.filter(
-    (report) => getDeadlineStatus(report.thoiHanDinhChi, today) === 'upcoming',
+    (report) => getDeadlineStatus(report.ngayHetThoiHieuTruyCuuTNHS, today) === 'upcoming',
   ).length;
   const overdueDeadlineCount = reports.filter(
-    (report) => getDeadlineStatus(report.thoiHanDinhChi, today) === 'overdue',
+    (report) => getDeadlineStatus(report.ngayHetThoiHieuTruyCuuTNHS, today) === 'overdue',
   ).length;
 
   const byDTV: Record<string, number> = {};

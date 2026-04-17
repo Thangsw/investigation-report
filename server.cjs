@@ -8,74 +8,113 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
-const reportsFile      = path.join(DATA_DIR, 'reports.json');
+const reportsFile = path.join(DATA_DIR, 'reports.json');
 const investigatorsFile = path.join(DATA_DIR, 'investigators.json');
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Đảm bảo thư mục DATA_DIR tồn tại
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// ── Data helpers ──────────────────────────────────────────────────────────────
+const normalizeReport = (raw = {}) => {
+  const createdAt = raw.createdAt || new Date().toISOString();
+
+  return {
+    id: raw.id || Date.now().toString(),
+    dtvName: raw.dtvName || '',
+    nguoiCamHoSo: raw.nguoiCamHoSo?.trim() || raw.dtvName || '',
+    loaiHoSo: raw.loaiHoSo === 'AD' ? 'AD' : 'AK',
+    soTap: raw.soTap || '',
+    soHoSo: raw.soHoSo || '',
+    soLuu: raw.soLuu || '',
+    trichYeu: raw.trichYeu || '',
+    doi: raw.doi || 'Đội 2',
+    tinhTrang: raw.tinhTrang || '',
+    ngayHetThoiHieuTruyCuuTNHS: raw.ngayHetThoiHieuTruyCuuTNHS || raw.thoiHanDinhChi || '',
+    tinhChatMucDoNghiemTrong: raw.tinhChatMucDoNghiemTrong || '',
+    khoKhan: raw.khoKhan || '',
+    createdAt,
+    updatedAt: raw.updatedAt || createdAt,
+  };
+};
+
 const readReports = () => {
   if (!fs.existsSync(reportsFile)) return [];
-  return JSON.parse(fs.readFileSync(reportsFile, 'utf8'));
+  return JSON.parse(fs.readFileSync(reportsFile, 'utf8')).map(normalizeReport);
 };
+
 const writeReports = (data) => {
-  fs.writeFileSync(reportsFile, JSON.stringify(data, null, 2));
+  fs.writeFileSync(reportsFile, JSON.stringify(data.map(normalizeReport), null, 2));
 };
 
 const readInvestigators = () => {
   if (!fs.existsSync(investigatorsFile)) return [];
   return JSON.parse(fs.readFileSync(investigatorsFile, 'utf8'));
 };
+
 const writeInvestigators = (data) => {
   fs.writeFileSync(investigatorsFile, JSON.stringify(data, null, 2));
 };
 
-// ── REPORTS ───────────────────────────────────────────────────────────────────
-
-// PHẢI đứng trước /api/reports/:id để Express không nhầm "export" là :id
-app.get('/api/reports/export', (req, res) => {
+app.get('/api/reports/export', (_req, res) => {
   try {
     const reports = readReports();
 
     const wsData = [
       [
-        'STT', 'Họ tên ĐTV', 'Người cầm hồ sơ', 'Loại hồ sơ',
-        'Số tập', 'Số hồ sơ', 'Số lưu', 'Trích yếu',
-        'Hồ sơ thuộc lĩnh vực', 'Tình trạng hiện tại',
-        'Thời hạn đình chỉ', 'Khó khăn/Vướng mắc/Đề xuất', 'Ngày tạo'
+        'STT',
+        'Họ tên ĐTV',
+        'Người cầm hồ sơ',
+        'Loại hồ sơ',
+        'Số tập',
+        'Số hồ sơ',
+        'Số lưu',
+        'Trích yếu',
+        'Hồ sơ thuộc lĩnh vực',
+        'Ngày hết thời hiệu truy cứu TNHS',
+        'Tính chất, mức độ nghiêm trọng',
+        'Tình trạng hiện tại',
+        'Khó khăn/Vướng mắc/Đề xuất',
+        'Ngày tạo',
       ],
-      ...reports.map((r, i) => [
-        i + 1,
-        r.dtvName,
-        r.nguoiCamHoSo,
-        r.loaiHoSo,
-        r.soTap,
-        r.soHoSo,
-        r.soLuu,
-        r.trichYeu        || '',
-        r.doi,
-        r.tinhTrang,
-        r.thoiHanDinhChi,
-        r.khoKhan,
-        new Date(r.createdAt).toLocaleDateString('vi-VN')
-      ])
+      ...reports.map((report, index) => [
+        index + 1,
+        report.dtvName,
+        report.nguoiCamHoSo,
+        report.loaiHoSo,
+        report.soTap,
+        report.soHoSo,
+        report.soLuu,
+        report.trichYeu || '',
+        report.doi,
+        report.ngayHetThoiHieuTruyCuuTNHS,
+        report.tinhChatMucDoNghiemTrong || '',
+        report.tinhTrang,
+        report.khoKhan,
+        new Date(report.createdAt).toLocaleDateString('vi-VN'),
+      ]),
     ];
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    // Độ rộng cột tự động
     ws['!cols'] = [
-      { wch: 4 }, { wch: 22 }, { wch: 22 }, { wch: 10 },
-      { wch: 8 }, { wch: 14 }, { wch: 10 }, { wch: 35 },
-      { wch: 18 }, { wch: 25 }, { wch: 20 }, { wch: 35 }, { wch: 12 }
+      { wch: 4 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 10 },
+      { wch: 8 },
+      { wch: 14 },
+      { wch: 10 },
+      { wch: 35 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 24 },
+      { wch: 25 },
+      { wch: 35 },
+      { wch: 12 },
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, 'Hồ sơ');
@@ -90,12 +129,12 @@ app.get('/api/reports/export', (req, res) => {
   }
 });
 
-app.get('/api/reports', (req, res) => {
+app.get('/api/reports', (_req, res) => {
   try {
     const reports = readReports();
     reports.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     res.json(reports);
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: 'Lỗi đọc dữ liệu' });
   }
 });
@@ -103,33 +142,35 @@ app.get('/api/reports', (req, res) => {
 app.post('/api/reports', (req, res) => {
   try {
     const reports = readReports();
-    const b = req.body;
-    const thoiHanDinhChi = b.thoiHanDinhChi || '';
+    const body = req.body;
+    const ngayHetThoiHieuTruyCuuTNHS = body.ngayHetThoiHieuTruyCuuTNHS || body.thoiHanDinhChi || '';
 
-    if (!b.dtvName || !b.loaiHoSo || !b.doi) {
+    if (!body.dtvName || !body.loaiHoSo || !body.doi) {
       return res.status(400).json({ error: 'Thiếu trường bắt buộc: dtvName, loaiHoSo, doi' });
     }
-    if (b.loaiHoSo === 'AD' && !thoiHanDinhChi) {
-      return res.status(400).json({ error: 'Hồ sơ AD bắt buộc phải có thời hạn đình chỉ' });
+
+    if (body.loaiHoSo === 'AD' && !ngayHetThoiHieuTruyCuuTNHS) {
+      return res.status(400).json({ error: 'Hồ sơ AD bắt buộc phải có ngày hết thời hiệu truy cứu TNHS' });
     }
 
     const now = new Date().toISOString();
-    const newReport = {
+    const newReport = normalizeReport({
       id: Date.now().toString(),
-      dtvName:         b.dtvName,
-      nguoiCamHoSo:    b.nguoiCamHoSo?.trim() || b.dtvName,
-      loaiHoSo:        b.loaiHoSo,
-      soTap:           b.soTap           || '',
-      soHoSo:          b.soHoSo          || '',
-      soLuu:           b.soLuu           || '',
-      trichYeu:        b.trichYeu        || '',
-      doi:             b.doi,
-      tinhTrang:       b.tinhTrang       || '',
-      thoiHanDinhChi,
-      khoKhan:         b.khoKhan         || '',
-      createdAt:       now,
-      updatedAt:       now,
-    };
+      dtvName: body.dtvName,
+      nguoiCamHoSo: body.nguoiCamHoSo?.trim() || body.dtvName,
+      loaiHoSo: body.loaiHoSo,
+      soTap: body.soTap || '',
+      soHoSo: body.soHoSo || '',
+      soLuu: body.soLuu || '',
+      trichYeu: body.trichYeu || '',
+      doi: body.doi,
+      tinhTrang: body.tinhTrang || '',
+      ngayHetThoiHieuTruyCuuTNHS,
+      tinhChatMucDoNghiemTrong: body.tinhChatMucDoNghiemTrong || '',
+      khoKhan: body.khoKhan || '',
+      createdAt: now,
+      updatedAt: now,
+    });
 
     reports.push(newReport);
     writeReports(reports);
@@ -143,33 +184,39 @@ app.post('/api/reports', (req, res) => {
 app.put('/api/reports/:id', (req, res) => {
   try {
     const reports = readReports();
-    const idx = reports.findIndex(r => r.id === req.params.id);
+    const idx = reports.findIndex((report) => report.id === req.params.id);
     if (idx === -1) return res.status(404).json({ error: 'Không tìm thấy hồ sơ' });
 
-    const b = req.body;
+    const body = req.body;
     const existing = reports[idx];
-    const nextLoaiHoSo = b.loaiHoSo ?? existing.loaiHoSo;
-    const nextThoiHanDinhChi = b.thoiHanDinhChi ?? existing.thoiHanDinhChi;
+    const nextLoaiHoSo = body.loaiHoSo ?? existing.loaiHoSo;
+    const nextNgayHetThoiHieuTruyCuuTNHS =
+      body.ngayHetThoiHieuTruyCuuTNHS ??
+      body.thoiHanDinhChi ??
+      existing.ngayHetThoiHieuTruyCuuTNHS ??
+      '';
 
-    if (nextLoaiHoSo === 'AD' && !nextThoiHanDinhChi) {
-      return res.status(400).json({ error: 'Hồ sơ AD bắt buộc phải có thời hạn đình chỉ' });
+    if (nextLoaiHoSo === 'AD' && !nextNgayHetThoiHieuTruyCuuTNHS) {
+      return res.status(400).json({ error: 'Hồ sơ AD bắt buộc phải có ngày hết thời hiệu truy cứu TNHS' });
     }
 
-    const updated = {
+    const updated = normalizeReport({
       ...existing,
-      dtvName:        b.dtvName        ?? existing.dtvName,
-      nguoiCamHoSo:   (b.nguoiCamHoSo?.trim()) || (b.dtvName ?? existing.dtvName),
-      loaiHoSo:       nextLoaiHoSo,
-      soTap:          b.soTap          ?? existing.soTap,
-      soHoSo:         b.soHoSo         ?? existing.soHoSo,
-      soLuu:          b.soLuu          ?? existing.soLuu,
-      trichYeu:       b.trichYeu       ?? existing.trichYeu ?? '',
-      doi:            b.doi            ?? existing.doi,
-      tinhTrang:      b.tinhTrang      ?? existing.tinhTrang,
-      thoiHanDinhChi: nextThoiHanDinhChi,
-      khoKhan:        b.khoKhan        ?? existing.khoKhan,
-      updatedAt:      new Date().toISOString(),
-    };
+      dtvName: body.dtvName ?? existing.dtvName,
+      nguoiCamHoSo: body.nguoiCamHoSo?.trim() || body.dtvName || existing.dtvName,
+      loaiHoSo: nextLoaiHoSo,
+      soTap: body.soTap ?? existing.soTap,
+      soHoSo: body.soHoSo ?? existing.soHoSo,
+      soLuu: body.soLuu ?? existing.soLuu,
+      trichYeu: body.trichYeu ?? existing.trichYeu ?? '',
+      doi: body.doi ?? existing.doi,
+      tinhTrang: body.tinhTrang ?? existing.tinhTrang,
+      ngayHetThoiHieuTruyCuuTNHS: nextNgayHetThoiHieuTruyCuuTNHS,
+      tinhChatMucDoNghiemTrong:
+        body.tinhChatMucDoNghiemTrong ?? existing.tinhChatMucDoNghiemTrong ?? '',
+      khoKhan: body.khoKhan ?? existing.khoKhan,
+      updatedAt: new Date().toISOString(),
+    });
 
     reports[idx] = updated;
     writeReports(reports);
@@ -183,7 +230,7 @@ app.put('/api/reports/:id', (req, res) => {
 app.delete('/api/reports/:id', (req, res) => {
   try {
     const reports = readReports();
-    writeReports(reports.filter(r => r.id !== req.params.id));
+    writeReports(reports.filter((report) => report.id !== req.params.id));
     res.json({ message: 'Xóa thành công' });
   } catch (err) {
     console.error(err);
@@ -191,12 +238,10 @@ app.delete('/api/reports/:id', (req, res) => {
   }
 });
 
-// ── INVESTIGATORS ─────────────────────────────────────────────────────────────
-
-app.get('/api/investigators', (req, res) => {
+app.get('/api/investigators', (_req, res) => {
   try {
     res.json(readInvestigators());
-  } catch (err) {
+  } catch (_err) {
     res.status(500).json({ error: 'Lỗi đọc danh sách ĐTV' });
   }
 });
@@ -220,7 +265,7 @@ app.post('/api/investigators', (req, res) => {
 app.put('/api/investigators/:id', (req, res) => {
   try {
     const investigators = readInvestigators();
-    const idx = investigators.findIndex(d => d.id === req.params.id);
+    const idx = investigators.findIndex((investigator) => investigator.id === req.params.id);
     if (idx === -1) return res.status(404).json({ error: 'Không tìm thấy ĐTV' });
 
     const name = req.body.name?.trim();
@@ -238,7 +283,7 @@ app.put('/api/investigators/:id', (req, res) => {
 app.delete('/api/investigators/:id', (req, res) => {
   try {
     const investigators = readInvestigators();
-    writeInvestigators(investigators.filter(d => d.id !== req.params.id));
+    writeInvestigators(investigators.filter((investigator) => investigator.id !== req.params.id));
     res.json({ message: 'Xóa thành công' });
   } catch (err) {
     console.error(err);
@@ -246,7 +291,6 @@ app.delete('/api/investigators/:id', (req, res) => {
   }
 });
 
-// ── Serve React build ─────────────────────────────────────────────────────────
 const distPath = path.join(__dirname, 'dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));

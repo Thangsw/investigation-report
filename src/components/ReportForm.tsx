@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import type { Report, Investigator, ReportFormData } from '../types';
 
+const SEVERITY_PRESETS = [
+  'Rất nghiêm trọng',
+  'Ít nghiêm trọng',
+  'Đặc biệt nghiêm trọng',
+] as const;
+
 const EMPTY_FORM: ReportFormData = {
   dtvName: '',
   nguoiCamHoSo: '',
@@ -12,7 +18,8 @@ const EMPTY_FORM: ReportFormData = {
   trichYeu: '',
   doi: 'Đội 2',
   tinhTrang: '',
-  thoiHanDinhChi: '',
+  ngayHetThoiHieuTruyCuuTNHS: '',
+  tinhChatMucDoNghiemTrong: '',
   khoKhan: '',
 };
 
@@ -24,7 +31,13 @@ interface Props {
   onCancel: () => void;
 }
 
-export default function ReportForm({ investigators, editingReport, prefillDTV, onSubmit, onCancel }: Props) {
+export default function ReportForm({
+  investigators,
+  editingReport,
+  prefillDTV,
+  onSubmit,
+  onCancel,
+}: Props) {
   const [form, setForm] = useState<ReportFormData>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isAD = form.loaiHoSo === 'AD';
@@ -32,42 +45,48 @@ export default function ReportForm({ investigators, editingReport, prefillDTV, o
   useEffect(() => {
     if (editingReport) {
       setForm({
-        dtvName:        editingReport.dtvName,
-        nguoiCamHoSo:   editingReport.nguoiCamHoSo,
-        loaiHoSo:       editingReport.loaiHoSo,
-        soTap:          editingReport.soTap,
-        soHoSo:         editingReport.soHoSo,
-        soLuu:          editingReport.soLuu,
-        trichYeu:       editingReport.trichYeu || '',
-        doi:            editingReport.doi,
-        tinhTrang:      editingReport.tinhTrang,
-        thoiHanDinhChi: editingReport.thoiHanDinhChi,
-        khoKhan:        editingReport.khoKhan,
+        dtvName: editingReport.dtvName,
+        nguoiCamHoSo: editingReport.nguoiCamHoSo,
+        loaiHoSo: editingReport.loaiHoSo,
+        soTap: editingReport.soTap,
+        soHoSo: editingReport.soHoSo,
+        soLuu: editingReport.soLuu,
+        trichYeu: editingReport.trichYeu || '',
+        doi: editingReport.doi,
+        tinhTrang: editingReport.tinhTrang,
+        ngayHetThoiHieuTruyCuuTNHS: editingReport.ngayHetThoiHieuTruyCuuTNHS,
+        tinhChatMucDoNghiemTrong: editingReport.tinhChatMucDoNghiemTrong || '',
+        khoKhan: editingReport.khoKhan,
       });
     } else {
       setForm({ ...EMPTY_FORM, dtvName: prefillDTV || '' });
     }
   }, [editingReport, prefillDTV]);
 
-  const set = (key: keyof ReportFormData, value: string) => {
-    setForm(prev => ({ ...prev, [key]: value }));
+  const setField = (key: keyof ReportFormData, value: string) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
     if (!form.dtvName.trim()) {
       alert('Vui lòng nhập họ tên ĐTV');
       return;
     }
-    if (isAD && !form.thoiHanDinhChi) {
-      alert('Hồ sơ AD bắt buộc phải nhập Thời hạn đình chỉ');
+
+    if (isAD && !form.ngayHetThoiHieuTruyCuuTNHS) {
+      alert('Hồ sơ AD bắt buộc phải nhập Ngày hết thời hiệu truy cứu TNHS');
       return;
     }
+
     const data: ReportFormData = {
       ...form,
       dtvName: form.dtvName.trim(),
       nguoiCamHoSo: form.nguoiCamHoSo.trim() || form.dtvName.trim(),
+      tinhChatMucDoNghiemTrong: form.tinhChatMucDoNghiemTrong.trim(),
     };
+
     setIsSubmitting(true);
     try {
       await onSubmit(data);
@@ -78,46 +97,42 @@ export default function ReportForm({ investigators, editingReport, prefillDTV, o
 
   return (
     <form onSubmit={handleSubmit}>
-
-      {/* 1. Họ tên ĐTV — free text + datalist gợi ý */}
       <div className="form-group">
-        <label>Họ tên ĐTV:</label>
+        <label>Họ tên ĐTV</label>
         <input
           type="text"
           className="form-control"
           list="dtv-datalist"
           value={form.dtvName}
-          onChange={e => set('dtvName', e.target.value)}
+          onChange={(event) => setField('dtvName', event.target.value)}
           placeholder="Nhập tên ĐTV..."
           autoComplete="off"
           required
         />
         <datalist id="dtv-datalist">
-          {investigators.map(d => (
-            <option key={d.id} value={d.name} />
+          {investigators.map((investigator) => (
+            <option key={investigator.id} value={investigator.name} />
           ))}
         </datalist>
       </div>
 
-      {/* 2. Người cầm hồ sơ */}
       <div className="form-group">
-        <label>Người cầm hồ sơ (bỏ trống nếu tự làm, không đổi cho ĐTV khác):</label>
+        <label>Người cầm hồ sơ</label>
         <input
           type="text"
           className="form-control"
           list="dtv-datalist"
           value={form.nguoiCamHoSo}
-          onChange={e => set('nguoiCamHoSo', e.target.value)}
+          onChange={(event) => setField('nguoiCamHoSo', event.target.value)}
           placeholder={`Để trống → tự điền "${form.dtvName || 'tên ĐTV'}"`}
           autoComplete="off"
         />
       </div>
 
-      {/* 3. Loại hồ sơ AK/AD */}
       <div className="form-group">
-        <label>Loại hồ sơ (AK/AD)</label>
+        <label>Loại hồ sơ</label>
         <div className="radio-group">
-          {(['AK', 'AD'] as const).map(type => (
+          {(['AK', 'AD'] as const).map((type) => (
             <label
               key={type}
               className={`radio-option ${form.loaiHoSo === type ? `selected-${type.toLowerCase()}` : ''}`}
@@ -127,7 +142,7 @@ export default function ReportForm({ investigators, editingReport, prefillDTV, o
                 name="loaiHoSo"
                 value={type}
                 checked={form.loaiHoSo === type}
-                onChange={() => set('loaiHoSo', type)}
+                onChange={() => setField('loaiHoSo', type)}
               />
               {type}
             </label>
@@ -135,7 +150,6 @@ export default function ReportForm({ investigators, editingReport, prefillDTV, o
         </div>
       </div>
 
-      {/* 4. Số tập / Số hồ sơ / Số lưu */}
       <div className="form-row">
         <div className="form-group">
           <label>Số tập</label>
@@ -143,7 +157,7 @@ export default function ReportForm({ investigators, editingReport, prefillDTV, o
             type="text"
             className="form-control"
             value={form.soTap}
-            onChange={e => set('soTap', e.target.value)}
+            onChange={(event) => setField('soTap', event.target.value)}
           />
         </div>
         <div className="form-group">
@@ -152,7 +166,7 @@ export default function ReportForm({ investigators, editingReport, prefillDTV, o
             type="text"
             className="form-control"
             value={form.soHoSo}
-            onChange={e => set('soHoSo', e.target.value)}
+            onChange={(event) => setField('soHoSo', event.target.value)}
           />
         </div>
         <div className="form-group">
@@ -161,30 +175,28 @@ export default function ReportForm({ investigators, editingReport, prefillDTV, o
             type="text"
             className="form-control"
             value={form.soLuu}
-            onChange={e => set('soLuu', e.target.value)}
+            onChange={(event) => setField('soLuu', event.target.value)}
           />
         </div>
       </div>
 
-      {/* 5. Trích yếu */}
       <div className="form-group">
         <label>Trích yếu</label>
         <textarea
           className="form-control"
           rows={2}
           value={form.trichYeu}
-          onChange={e => set('trichYeu', e.target.value)}
+          onChange={(event) => setField('trichYeu', event.target.value)}
           placeholder="Tóm tắt nội dung vụ việc..."
         />
       </div>
 
-      {/* 6. Hồ sơ thuộc lĩnh vực — đưa lên đây */}
       <div className="form-group">
-        <label>Hồ sơ thuộc lĩnh vực của (lựa chọn)</label>
+        <label>Hồ sơ thuộc lĩnh vực của</label>
         <select
           className="form-control"
           value={form.doi}
-          onChange={e => set('doi', e.target.value as ReportFormData['doi'])}
+          onChange={(event) => setField('doi', event.target.value as ReportFormData['doi'])}
           required
         >
           <option value="Đội 2">Đội 2</option>
@@ -193,7 +205,35 @@ export default function ReportForm({ investigators, editingReport, prefillDTV, o
         </select>
       </div>
 
-      {/* 7. Tình trạng hiện tại */}
+      <div className="form-group">
+        <label>{isAD ? 'Ngày hết thời hiệu truy cứu TNHS *' : 'Ngày hết thời hiệu truy cứu TNHS'}</label>
+        <input
+          type="date"
+          className="form-control"
+          value={form.ngayHetThoiHieuTruyCuuTNHS}
+          onChange={(event) => setField('ngayHetThoiHieuTruyCuuTNHS', event.target.value)}
+          required={isAD}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Tính chất, mức độ nghiêm trọng</label>
+        <input
+          type="text"
+          className="form-control"
+          list="severity-datalist"
+          value={form.tinhChatMucDoNghiemTrong}
+          onChange={(event) => setField('tinhChatMucDoNghiemTrong', event.target.value)}
+          placeholder="Rất nghiêm trọng / Ít nghiêm trọng / Đặc biệt nghiêm trọng..."
+          autoComplete="off"
+        />
+        <datalist id="severity-datalist">
+          {SEVERITY_PRESETS.map((severity) => (
+            <option key={severity} value={severity} />
+          ))}
+        </datalist>
+      </div>
+
       <div className="form-group">
         <label>Tình trạng hiện tại</label>
         <input
@@ -201,8 +241,8 @@ export default function ReportForm({ investigators, editingReport, prefillDTV, o
           className="form-control"
           list="tinhtrang-datalist"
           value={form.tinhTrang}
-          onChange={e => set('tinhTrang', e.target.value)}
-          placeholder="Đang xử lý / đã Ra quyết định không khởi tố / Đã phân công lại..."
+          onChange={(event) => setField('tinhTrang', event.target.value)}
+          placeholder="Đang xử lý / Đã ra quyết định không khởi tố / Đã phân công lại..."
           autoComplete="off"
         />
         <datalist id="tinhtrang-datalist">
@@ -216,42 +256,34 @@ export default function ReportForm({ investigators, editingReport, prefillDTV, o
         </datalist>
       </div>
 
-      {/* 8. Thời hạn ra quyết định đình chỉ */}
-      <div className="form-group">
-        <label>{isAD ? 'Thời hạn đình chỉ *' : 'Thời hạn đình chỉ'}</label>
-        <input
-          type="date"
-          className="form-control"
-          value={form.thoiHanDinhChi}
-          onChange={e => set('thoiHanDinhChi', e.target.value)}
-          required={isAD}
-        />
-        <div className="field-note">
-          {isAD ? 'Hồ sơ AD bắt buộc phải nhập thời hạn đình chỉ.' : 'Hồ sơ AK có thể để trống.'}
-        </div>
-      </div>
-
-      {/* 9. Khó khăn, vướng mắc, đề xuất */}
       <div className="form-group">
         <label>Khó khăn, vướng mắc, đề xuất</label>
         <textarea
           className="form-control"
           rows={3}
           value={form.khoKhan}
-          onChange={e => set('khoKhan', e.target.value)}
+          onChange={(event) => setField('khoKhan', event.target.value)}
           placeholder="Ghi tự do..."
         />
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-        <button type="button" className="btn-small" onClick={onCancel}
-          style={{ flex: 1, justifyContent: 'center', padding: '14px' }}>
+        <button
+          type="button"
+          className="btn-small"
+          onClick={onCancel}
+          style={{ flex: 1, justifyContent: 'center', padding: '14px' }}
+        >
           Hủy
         </button>
-        <button type="submit" className="btn-submit" disabled={isSubmitting || !form.dtvName.trim()}
-          style={{ flex: 2 }}>
+        <button
+          type="submit"
+          className="btn-submit"
+          disabled={isSubmitting || !form.dtvName.trim()}
+          style={{ flex: 2 }}
+        >
           <Send size={16} />
-          {isSubmitting ? 'Đang lưu...' : (editingReport ? 'Lưu thay đổi' : 'Lưu hồ sơ')}
+          {isSubmitting ? 'Đang lưu...' : editingReport ? 'Lưu thay đổi' : 'Lưu hồ sơ'}
         </button>
       </div>
     </form>

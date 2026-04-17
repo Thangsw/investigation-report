@@ -15,8 +15,8 @@ export default function StatsCards({ reports }: Props) {
   return (
     <>
       <div className="section-card glass-panel">
-        <div className="section-title" style={{ marginBottom: 12 }}>Khối lượng bộ phận tổng hợp</div>
-        <div className="stats-grid stats-grid-3" style={{ marginBottom: 0 }}>
+        <div className="section-title" style={{ marginBottom: 12 }}>Hồ sơ rút mượn từ PV06</div>
+        <div className="stats-grid stats-grid-4" style={{ marginBottom: 0 }}>
           <div className="stat-card">
             <div className="stat-value">{TOTAL_CASE_TARGET}</div>
             <div className="stat-label">Cần rút</div>
@@ -29,19 +29,23 @@ export default function StatsCards({ reports }: Props) {
             <div className="stat-value amber">{metrics.remainingToExtract}</div>
             <div className="stat-label">Còn lại</div>
           </div>
+          <div className="stat-card">
+            <div className="stat-value green">{extractionRateLabel}</div>
+            <div className="stat-label">Tỉ lệ rút</div>
+          </div>
         </div>
       </div>
 
       <div className="section-card glass-panel">
         <div className="section-title" style={{ marginBottom: 12 }}>Tiến độ thực hiện của đơn vị</div>
-        <div className="stats-grid stats-grid-3" style={{ marginBottom: 0 }}>
+        <div className="stats-grid stats-grid-4" style={{ marginBottom: 0 }}>
           <div className="stat-card">
             <div className="stat-value">{metrics.completedCount}</div>
             <div className="stat-label">Đã làm / đã báo cáo</div>
           </div>
           <div className="stat-card">
             <div className="stat-value green">{completionRateLabel}</div>
-            <div className="stat-label">Tỷ lệ thực hiện</div>
+            <div className="stat-label">Tỉ lệ thực hiện</div>
           </div>
           <div className="stat-card">
             <div className="stat-value blue">{metrics.remainingToReport}</div>
@@ -53,23 +57,19 @@ export default function StatsCards({ reports }: Props) {
           </div>
           <div className="stat-card">
             <div className="stat-value amber">{metrics.upcomingDeadlineCount}</div>
-            <div className="stat-label">Sắp đến hạn đình chỉ</div>
+            <div className="stat-label">Sắp hết thời hiệu TNHS</div>
           </div>
           <div className="stat-card">
             <div className="stat-value" style={{ color: metrics.overdueDeadlineCount > 0 ? '#ff4757' : '#2ed573' }}>
               {metrics.overdueDeadlineCount}
             </div>
-            <div className="stat-label">Quá hạn đình chỉ</div>
+            <div className="stat-label">Quá thời hiệu TNHS</div>
           </div>
           <div className="stat-card">
             <div className="stat-value" style={{ color: metrics.difficultyCount > 0 ? '#ff9f43' : '#2ed573' }}>
               {metrics.difficultyCount}
             </div>
             <div className="stat-label">Khó khăn / vướng mắc</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value blue">{extractionRateLabel}</div>
-            <div className="stat-label">Tỷ lệ đã rút</div>
           </div>
           <div className="stat-card">
             <div className="stat-value amber">{metrics.adCount}</div>
@@ -115,10 +115,7 @@ export default function StatsCards({ reports }: Props) {
             <div key={name} className="stat-bar-row">
               <span className="bar-name">{name}</span>
               <div className="stat-bar-track">
-                <div
-                  className="stat-bar-fill"
-                  style={{ width: `${(count / maxDTV) * 100}%` }}
-                />
+                <div className="stat-bar-fill" style={{ width: `${(count / maxDTV) * 100}%` }} />
               </div>
               <span className="stat-bar-count">{count}</span>
             </div>

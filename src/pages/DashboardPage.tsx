@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api';
 import type { Report, Investigator } from '../types';
 import StatsCards from '../components/StatsCards';
@@ -13,14 +14,17 @@ interface Filters {
 }
 
 export default function DashboardPage() {
-  const [reports, setReports]           = useState<Report[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [investigators, setInvestigators] = useState<Investigator[]>([]);
-  const [filters, setFilters]           = useState<Filters>({ dtvName: '', loaiHoSo: '', doi: '' });
+  const [filters, setFilters] = useState<Filters>({ dtvName: '', loaiHoSo: '', doi: '' });
 
   const fetchAll = useCallback(async () => {
-    const [r, d] = await Promise.all([api.getReports(), api.getInvestigators()]);
-    setReports(r);
-    setInvestigators(d);
+    const [reportData, investigatorData] = await Promise.all([
+      api.getReports(),
+      api.getInvestigators(),
+    ]);
+    setReports(reportData);
+    setInvestigators(investigatorData);
   }, []);
 
   useEffect(() => {
@@ -30,23 +34,28 @@ export default function DashboardPage() {
   }, [fetchAll]);
 
   const changeFilter = (key: keyof Filters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   const filteredReports = useMemo(() => {
-    return reports.filter(r => {
-      if (filters.dtvName  && r.dtvName  !== filters.dtvName)  return false;
-      if (filters.loaiHoSo && r.loaiHoSo !== filters.loaiHoSo) return false;
-      if (filters.doi      && r.doi      !== filters.doi)      return false;
+    return reports.filter((report) => {
+      if (filters.dtvName && report.dtvName !== filters.dtvName) return false;
+      if (filters.loaiHoSo && report.loaiHoSo !== filters.loaiHoSo) return false;
+      if (filters.doi && report.doi !== filters.doi) return false;
       return true;
     });
   }, [reports, filters]);
 
   return (
     <div>
-      <div className="section-header" style={{ marginBottom: 12 }}>
-        <span className="section-title">Báo cáo lãnh đạo</span>
-        <ExportButton />
+      <div className="dashboard-toolbar glass-panel">
+        <div className="dashboard-title">BÁO CÁO TỔNG HỢP</div>
+        <div className="dashboard-actions">
+          <Link to="/" className="btn-primary-cta">
+            Thêm hồ sơ đã làm
+          </Link>
+          <ExportButton />
+        </div>
       </div>
 
       <StatsCards reports={reports} />

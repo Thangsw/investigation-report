@@ -22,10 +22,10 @@ export default function ReportList({ reports, onEdit, onDelete }: Props) {
   return (
     <div className="point-list">
       {reports.map((report, index) => {
-        const deadlineStatus = getDeadlineStatus(report.thoiHanDinhChi);
+        const deadlineStatus = getDeadlineStatus(report.ngayHetThoiHieuTruyCuuTNHS);
         const isUpcoming = deadlineStatus === 'upcoming';
         const isOverdue = deadlineStatus === 'overdue';
-        const daysUntilDeadline = getDaysUntilDeadline(report.thoiHanDinhChi);
+        const daysUntilDeadline = getDaysUntilDeadline(report.ngayHetThoiHieuTruyCuuTNHS);
         const createdAt = new Date(report.createdAt).toLocaleDateString('vi-VN');
 
         return (
@@ -36,8 +36,8 @@ export default function ReportList({ reports, onEdit, onDelete }: Props) {
                 <div className="point-item-badges">
                   <span className={`badge badge-${report.loaiHoSo.toLowerCase()}`}>{report.loaiHoSo}</span>
                   <span className="badge badge-doi">{report.doi}</span>
-                  {isUpcoming && <span className="badge badge-upcoming">Sắp đến hạn</span>}
-                  {isOverdue && <span className="badge badge-overdue">Quá hạn</span>}
+                  {isUpcoming && <span className="badge badge-upcoming">Sắp hết thời hiệu</span>}
+                  {isOverdue && <span className="badge badge-overdue">Quá thời hiệu</span>}
                 </div>
               </div>
               <span className="point-time">{createdAt}</span>
@@ -93,18 +93,24 @@ export default function ReportList({ reports, onEdit, onDelete }: Props) {
               </p>
             )}
 
+            {report.tinhChatMucDoNghiemTrong && (
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
+                Tính chất, mức độ nghiêm trọng: {report.tinhChatMucDoNghiemTrong}
+              </p>
+            )}
+
             {report.tinhTrang && (
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 4 }}>
                 Tình trạng: {report.tinhTrang}
               </p>
             )}
 
-            {report.thoiHanDinhChi && (
+            {report.ngayHetThoiHieuTruyCuuTNHS && (
               <p
                 style={{ fontSize: '0.82rem', marginBottom: 4 }}
                 className={isOverdue ? 'text-overdue' : isUpcoming ? 'text-upcoming' : ''}
               >
-                Hạn đình chỉ: {formatDate(report.thoiHanDinhChi)}
+                Ngày hết thời hiệu truy cứu TNHS: {formatDate(report.ngayHetThoiHieuTruyCuuTNHS)}
                 {isUpcoming && daysUntilDeadline !== null && (
                   daysUntilDeadline === 0
                     ? ' (đến hạn hôm nay)'

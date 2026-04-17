@@ -134,11 +134,17 @@ export default function ReportPage() {
       <div className="fab-container left">
         <button
           className="fab-extended"
-          style={{ background: '#ff4757', boxShadow: '0 4px 16px rgba(255,71,87,0.4)' }}
+          style={{
+            background: '#ff4757',
+            boxShadow: '0 12px 26px rgba(255,71,87,0.28)',
+            height: 60,
+            padding: '0 28px',
+            fontSize: '1rem',
+          }}
           onClick={() => openForm()}
         >
           <Plus size={20} />
-          <span>Thêm hồ sơ</span>
+          <span>Thêm hồ sơ đã làm</span>
         </button>
       </div>
 
@@ -152,7 +158,7 @@ export default function ReportPage() {
 
       <div className={`bottom-sheet glass-panel ${sheetOpen === 'form' ? 'open' : ''}`}>
         <div className="sheet-header">
-          <h2>{editingReport ? 'Sửa hồ sơ' : 'Thêm hồ sơ mới'}</h2>
+          <h2>{editingReport ? 'Sửa hồ sơ' : 'Thêm hồ sơ đã làm'}</h2>
           <button className="btn-close" onClick={closeSheet}>
             <X size={16} />
           </button>

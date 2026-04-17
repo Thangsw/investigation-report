@@ -9,7 +9,8 @@ export interface Report {
   trichYeu: string;
   doi: 'Đội 2' | 'Đội 3' | 'Đội 4';
   tinhTrang: string;
-  thoiHanDinhChi: string; // YYYY-MM-DD
+  ngayHetThoiHieuTruyCuuTNHS: string; // YYYY-MM-DD
+  tinhChatMucDoNghiemTrong: string;
   khoKhan: string;
   createdAt: string;
   updatedAt: string;
