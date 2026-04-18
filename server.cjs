@@ -211,13 +211,6 @@ app.post('/api/reports', (req, res) => {
       return res.status(400).json({ error: 'Thiếu trường bắt buộc: dtvName, loaiHoSo, doi' });
     }
 
-    if (!body.qdPhanCongPTT) {
-      return res.status(400).json({ error: 'Thiếu QĐ phân công PTT' });
-    }
-    if (!body.qdPhanCongLaiDTV) {
-      return res.status(400).json({ error: 'Thiếu QĐ phân công lại ĐTV' });
-    }
-
     if (body.loaiHoSo === 'AD' && !ngayHetThoiHieuTruyCuuTNHS) {
       return res.status(400).json({ error: 'Hồ sơ AD bắt buộc phải có ngày hết thời hiệu truy cứu TNHS' });
     }

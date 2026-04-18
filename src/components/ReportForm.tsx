@@ -110,8 +110,6 @@ export default function ReportForm({
 
   const toBanDiaInvalid = submitted && !form.toBanDia;
   const soHoSoInvalid = submitted && !form.soHoSo.trim();
-  const qdPTTInvalid = submitted && !form.qdPhanCongPTT.trim();
-  const qdLaiDTVInvalid = submitted && !form.qdPhanCongLaiDTV.trim();
   const tinhChatInvalid = submitted && !form.tinhChatMucDoNghiemTrong.trim();
   const ngayInvalid = submitted && !form.ngayHetThoiHieuTruyCuuTNHS;
 
@@ -121,8 +119,7 @@ export default function ReportForm({
 
     if (!form.dtvName.trim()) { alert('Vui lòng nhập họ tên ĐTV'); return; }
     if (!form.soHoSo.trim()) return;
-    if (!form.qdPhanCongPTT.trim()) return;
-    if (!form.qdPhanCongLaiDTV.trim()) return;
+
     if (!form.tinhChatMucDoNghiemTrong.trim()) return;
     if (!form.ngayHetThoiHieuTruyCuuTNHS) return;
     if (!form.toBanDia) return;
@@ -234,7 +231,7 @@ export default function ReportForm({
 
       {/* QĐ phân công PTT */}
       <div className="form-group">
-        <label>QĐ phân công PTT *</label>
+        <label>QĐ phân công PTT</label>
         <input
           type="text"
           className="form-control"
@@ -243,12 +240,11 @@ export default function ReportForm({
           placeholder="Số/ký hiệu quyết định phân công PTT..."
           autoComplete="off"
         />
-        {qdPTTInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
       </div>
 
       {/* QĐ phân công lại ĐTV */}
       <div className="form-group">
-        <label>QĐ phân công lại ĐTV *</label>
+        <label>QĐ phân công lại ĐTV</label>
         <input
           type="text"
           className="form-control"
@@ -257,7 +253,6 @@ export default function ReportForm({
           placeholder="Số/ký hiệu quyết định phân công lại ĐTV..."
           autoComplete="off"
         />
-        {qdLaiDTVInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
       </div>
 
       {/* QĐ khởi tố — chỉ hiện với AK */}
