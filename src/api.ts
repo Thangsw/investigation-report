@@ -24,6 +24,13 @@ export const api = {
     window.location.href = `/api/reports/export${qs ? `?${qs}` : ''}`;
   },
 
+  // ── Config ───────────────────────────────────────────────────────────────
+  getConfig: () =>
+    axios.get<{ totalCaseTarget: number }>('/api/config').then(r => r.data),
+
+  updateConfig: (totalCaseTarget: number) =>
+    axios.post<{ totalCaseTarget: number }>('/api/config', { totalCaseTarget }).then(r => r.data),
+
   // ── Investigators ─────────────────────────────────────────────────────────
   getInvestigators: () =>
     axios.get<Investigator[]>('/api/investigators').then(r => r.data),

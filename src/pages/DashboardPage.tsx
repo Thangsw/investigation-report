@@ -7,7 +7,7 @@ import FilterBar, { type Filters } from '../components/FilterBar';
 import ReportList from '../components/ReportList';
 import ExportButton from '../components/ExportButton';
 import ReportForm from '../components/ReportForm';
-import { getDeadlineStatus, hasDifficulty } from '../reportMetrics';
+import { getDeadlineStatus, hasDifficulty, DEFAULT_TOTAL_CASE_TARGET } from '../reportMetrics';
 
 export default function DashboardPage() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -15,14 +15,17 @@ export default function DashboardPage() {
   const [filters, setFilters] = useState<Filters>({ dtvName: '', loaiHoSo: '', doi: '', toBanDia: '' });
   const [sheetOpen, setSheetOpen] = useState(false);
   const [spotlight, setSpotlight] = useState<SpotlightType | null>(null);
+  const [totalCaseTarget, setTotalCaseTarget] = useState(DEFAULT_TOTAL_CASE_TARGET);
 
   const fetchAll = useCallback(async () => {
-    const [reportData, investigatorData] = await Promise.all([
+    const [reportData, investigatorData, configData] = await Promise.all([
       api.getReports(),
       api.getInvestigators(),
+      api.getConfig(),
     ]);
     setReports(reportData);
     setInvestigators(investigatorData);
+    setTotalCaseTarget(configData.totalCaseTarget);
   }, []);
 
   useEffect(() => {
@@ -85,7 +88,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <StatsCards reports={reports} spotlight={spotlight} onCardClick={handleCardClick} />
+      <StatsCards reports={reports} totalCaseTarget={totalCaseTarget} spotlight={spotlight} onCardClick={handleCardClick} />
 
       {spotlight && (
         <div className="spotlight-panel glass-panel">

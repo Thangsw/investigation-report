@@ -193,15 +193,14 @@ select {
 }
 
 .stat-bar-row .bar-name {
-  flex: 0 0 120px;
+  flex: 0 0 auto;
+  min-width: 0;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   color: var(--text-primary);
 }
 
 .stat-bar-track {
-  flex: 1;
+  flex: 0 0 120px;
   height: 6px;
   background: var(--surface-contrast);
   border-radius: 3px;

@@ -10,6 +10,15 @@ const PORT = process.env.PORT || 3001;
 const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
 const reportsFile = path.join(DATA_DIR, 'reports.json');
 const investigatorsFile = path.join(DATA_DIR, 'investigators.json');
+const configFile = path.join(DATA_DIR, 'config.json');
+
+const DEFAULT_CONFIG = { totalCaseTarget: 610 };
+const readConfig = () => {
+  if (!fs.existsSync(configFile)) return { ...DEFAULT_CONFIG };
+  try { return { ...DEFAULT_CONFIG, ...JSON.parse(fs.readFileSync(configFile, 'utf8')) }; }
+  catch { return { ...DEFAULT_CONFIG }; }
+};
+const writeConfig = (data) => fs.writeFileSync(configFile, JSON.stringify(data, null, 2));
 
 app.use(cors());
 app.use(express.json());
@@ -362,6 +371,23 @@ app.delete('/api/investigators/:id', (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Lỗi xóa ĐTV' });
+  }
+});
+
+app.get('/api/config', (_req, res) => {
+  res.json(readConfig());
+});
+
+app.post('/api/config', (req, res) => {
+  try {
+    const { totalCaseTarget } = req.body;
+    if (typeof totalCaseTarget !== 'number' || totalCaseTarget <= 0 || !Number.isInteger(totalCaseTarget)) {
+      return res.status(400).json({ error: 'totalCaseTarget phải là số nguyên dương' });
+    }
+    writeConfig({ totalCaseTarget });
+    res.json({ message: 'Cập nhật thành công', totalCaseTarget });
+  } catch (err) {
+    res.status(500).json({ error: 'Lỗi lưu cấu hình' });
   }
 });
 

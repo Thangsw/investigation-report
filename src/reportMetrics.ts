@@ -1,7 +1,6 @@
 import type { Report } from './types';
 
-export const TOTAL_CASE_TARGET = 400;
-export const EXTRACTED_CASE_TARGET = 306;
+export const DEFAULT_TOTAL_CASE_TARGET = 610;
 export const DEADLINE_WARNING_DAYS = 30;
 
 export type DeadlineStatus = 'none' | 'upcoming' | 'overdue';
@@ -53,19 +52,15 @@ export function hasDifficulty(report: Report) {
   return (report.khoKhan ?? '').trim().length > 0;
 }
 
-export function getDashboardMetrics(reports: Report[]) {
+export function getDashboardMetrics(reports: Report[], totalCaseTarget = DEFAULT_TOTAL_CASE_TARGET) {
   const today = startOfToday();
 
   const akCount = reports.filter((report) => report.loaiHoSo === 'AK').length;
   const adCount = reports.filter((report) => report.loaiHoSo === 'AD').length;
   const completedCount = reports.length;
-  const remainingToExtract = Math.max(TOTAL_CASE_TARGET - EXTRACTED_CASE_TARGET, 0);
-  const remainingToReport = Math.max(EXTRACTED_CASE_TARGET - completedCount, 0);
-  const completionRate = EXTRACTED_CASE_TARGET > 0
-    ? (completedCount / EXTRACTED_CASE_TARGET) * 100
-    : 0;
-  const extractionRate = TOTAL_CASE_TARGET > 0
-    ? (EXTRACTED_CASE_TARGET / TOTAL_CASE_TARGET) * 100
+  const remainingToReport = Math.max(totalCaseTarget - completedCount, 0);
+  const completionRate = totalCaseTarget > 0
+    ? (completedCount / totalCaseTarget) * 100
     : 0;
 
   const reassignedCount = reports.filter(isReassignedReport).length;
@@ -97,10 +92,8 @@ export function getDashboardMetrics(reports: Report[]) {
     completedCount,
     completionRate,
     difficultyCount,
-    extractionRate,
     overdueDeadlineCount,
     reassignedCount,
-    remainingToExtract,
     remainingToReport,
     upcomingDeadlineCount,
   };
