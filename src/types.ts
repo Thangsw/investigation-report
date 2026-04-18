@@ -16,6 +16,7 @@ export interface Report {
   tinhTrang: string;
   ketQuaGiaiQuyet: string;
   ngayHetThoiHieuTruyCuuTNHS: string; // YYYY-MM-DD
+  daThucHien: boolean;
   tinhChatMucDoNghiemTrong: string;
   khoKhan: string;
   createdAt: string;

@@ -60,8 +60,8 @@ export default function DashboardPage() {
 
   const spotlightReports = useMemo(() => {
     if (!spotlight) return [];
-    if (spotlight === 'upcoming') return reports.filter((r) => getDeadlineStatus(r.ngayHetThoiHieuTruyCuuTNHS) === 'upcoming');
-    if (spotlight === 'overdue')  return reports.filter((r) => getDeadlineStatus(r.ngayHetThoiHieuTruyCuuTNHS) === 'overdue');
+    if (spotlight === 'upcoming') return reports.filter((r) => !r.daThucHien && getDeadlineStatus(r.ngayHetThoiHieuTruyCuuTNHS) === 'upcoming');
+    if (spotlight === 'overdue')  return reports.filter((r) => !r.daThucHien && getDeadlineStatus(r.ngayHetThoiHieuTruyCuuTNHS) === 'overdue');
     if (spotlight === 'difficulty') return reports.filter(hasDifficulty);
     return [];
   }, [reports, spotlight]);

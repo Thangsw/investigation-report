@@ -31,6 +31,7 @@ const EMPTY_FORM: FormState = {
   tinhTrang: '',
   ketQuaGiaiQuyet: '',
   ngayHetThoiHieuTruyCuuTNHS: '',
+  daThucHien: false,
   tinhChatMucDoNghiemTrong: '',
   khoKhan: '',
 };
@@ -90,6 +91,7 @@ export default function ReportForm({
         tinhTrang: editingReport.tinhTrang,
         ketQuaGiaiQuyet: editingReport.ketQuaGiaiQuyet || '',
         ngayHetThoiHieuTruyCuuTNHS: editingReport.ngayHetThoiHieuTruyCuuTNHS,
+        daThucHien: editingReport.daThucHien || false,
         tinhChatMucDoNghiemTrong: editingReport.tinhChatMucDoNghiemTrong || '',
         khoKhan: editingReport.khoKhan,
       });
@@ -332,6 +334,14 @@ export default function ReportForm({
           onChange={(e) => setField('ngayHetThoiHieuTruyCuuTNHS', e.target.value)}
         />
         {ngayInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
+        <label className="checkbox-row" style={{ marginTop: 8 }}>
+          <input
+            type="checkbox"
+            checked={form.daThucHien}
+            onChange={(e) => setField('daThucHien', e.target.checked)}
+          />
+          <span>Đã thực hiện (bỏ cảnh báo thời hiệu)</span>
+        </label>
       </div>
 
       {/* Tính chất */}

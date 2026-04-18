@@ -66,10 +66,10 @@ export function getDashboardMetrics(reports: Report[], totalCaseTarget = DEFAULT
   const reassignedCount = reports.filter(isReassignedReport).length;
   const difficultyCount = reports.filter(hasDifficulty).length;
   const upcomingDeadlineCount = reports.filter(
-    (report) => getDeadlineStatus(report.ngayHetThoiHieuTruyCuuTNHS, today) === 'upcoming',
+    (report) => !report.daThucHien && getDeadlineStatus(report.ngayHetThoiHieuTruyCuuTNHS, today) === 'upcoming',
   ).length;
   const overdueDeadlineCount = reports.filter(
-    (report) => getDeadlineStatus(report.ngayHetThoiHieuTruyCuuTNHS, today) === 'overdue',
+    (report) => !report.daThucHien && getDeadlineStatus(report.ngayHetThoiHieuTruyCuuTNHS, today) === 'overdue',
   ).length;
 
   const byDTV: Record<string, number> = {};

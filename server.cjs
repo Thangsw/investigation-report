@@ -30,6 +30,7 @@ if (!fs.existsSync(DATA_DIR)) {
 const normalizeReport = (raw = {}) => {
   const createdAt = raw.createdAt || new Date().toISOString();
   const hoSoHienHanh = raw.hoSoHienHanh === true || raw.hoSoHienHanh === 'true';
+  const daThucHien = raw.daThucHien === true || raw.daThucHien === 'true';
 
   return {
     id: raw.id || Date.now().toString(),
@@ -43,6 +44,7 @@ const normalizeReport = (raw = {}) => {
     qdPhanCongLaiDTV: raw.qdPhanCongLaiDTV || '',
     qdKhoiTo: raw.qdKhoiTo || '',
     hoSoHienHanh,
+    daThucHien,
     trichYeu: raw.trichYeu || '',
     doi: raw.doi || 'Đội 2',
     toBanDia: ['Hoà Bình', 'Lạc Thuỷ'].includes(raw.toBanDia) ? raw.toBanDia : 'Hoà Bình',

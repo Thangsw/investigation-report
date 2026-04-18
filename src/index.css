@@ -193,9 +193,10 @@ select {
 }
 
 .stat-bar-row .bar-name {
-  flex: 0 0 auto;
-  min-width: 0;
+  flex: 0 0 175px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--text-primary);
 }
 
