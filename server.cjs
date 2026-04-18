@@ -30,6 +30,9 @@ const normalizeReport = (raw = {}) => {
     soTap: raw.soTap || '',
     soHoSo: raw.soHoSo || '',
     soLuu: raw.soLuu || '',
+    qdPhanCongPTT: raw.qdPhanCongPTT || '',
+    qdPhanCongLaiDTV: raw.qdPhanCongLaiDTV || '',
+    qdKhoiTo: raw.qdKhoiTo || '',
     hoSoHienHanh,
     trichYeu: raw.trichYeu || '',
     doi: raw.doi || 'Đội 2',
@@ -112,6 +115,9 @@ app.get('/api/reports/export', (req, res) => {
         'Số tập',
         'Số hồ sơ',
         'Số lưu',
+        'QĐ phân công PTT',
+        'QĐ phân công lại ĐTV',
+        'QĐ khởi tố',
         'Hồ sơ hiện hành',
         'Trích yếu',
         'Hồ sơ thuộc lĩnh vực',
@@ -131,6 +137,9 @@ app.get('/api/reports/export', (req, res) => {
         report.soTap,
         report.soHoSo,
         report.soLuu,
+        report.qdPhanCongPTT || '',
+        report.qdPhanCongLaiDTV || '',
+        report.qdKhoiTo || '',
         report.hoSoHienHanh ? '✓' : '',
         report.trichYeu || '',
         report.doi,
@@ -148,23 +157,26 @@ app.get('/api/reports/export', (req, res) => {
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
     ws['!cols'] = [
-      { wch: 4 },
-      { wch: 22 },
-      { wch: 22 },
-      { wch: 10 },
-      { wch: 8 },
-      { wch: 14 },
-      { wch: 10 },
-      { wch: 14 },
-      { wch: 35 },
-      { wch: 18 },
-      { wch: 14 },
-      { wch: 18 },
-      { wch: 24 },
-      { wch: 25 },
-      { wch: 25 },
-      { wch: 35 },
-      { wch: 12 },
+      { wch: 4 },   // STT
+      { wch: 22 },  // dtvName
+      { wch: 22 },  // nguoiCamHoSo
+      { wch: 10 },  // loaiHoSo
+      { wch: 8 },   // soTap
+      { wch: 14 },  // soHoSo
+      { wch: 10 },  // soLuu
+      { wch: 18 },  // qdPhanCongPTT
+      { wch: 22 },  // qdPhanCongLaiDTV
+      { wch: 18 },  // qdKhoiTo
+      { wch: 14 },  // hoSoHienHanh
+      { wch: 35 },  // trichYeu
+      { wch: 18 },  // doi
+      { wch: 14 },  // toBanDia
+      { wch: 18 },  // ngayHetThoiHieu
+      { wch: 24 },  // tinhChat
+      { wch: 25 },  // tinhTrang
+      { wch: 25 },  // ketQua
+      { wch: 35 },  // khoKhan
+      { wch: 12 },  // createdAt
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, 'Hồ sơ');
@@ -199,6 +211,13 @@ app.post('/api/reports', (req, res) => {
       return res.status(400).json({ error: 'Thiếu trường bắt buộc: dtvName, loaiHoSo, doi' });
     }
 
+    if (!body.qdPhanCongPTT) {
+      return res.status(400).json({ error: 'Thiếu QĐ phân công PTT' });
+    }
+    if (!body.qdPhanCongLaiDTV) {
+      return res.status(400).json({ error: 'Thiếu QĐ phân công lại ĐTV' });
+    }
+
     if (body.loaiHoSo === 'AD' && !ngayHetThoiHieuTruyCuuTNHS) {
       return res.status(400).json({ error: 'Hồ sơ AD bắt buộc phải có ngày hết thời hiệu truy cứu TNHS' });
     }
@@ -212,6 +231,9 @@ app.post('/api/reports', (req, res) => {
       soTap: body.soTap || '',
       soHoSo: body.soHoSo || '',
       soLuu: body.soLuu || '',
+      qdPhanCongPTT: body.qdPhanCongPTT || '',
+      qdPhanCongLaiDTV: body.qdPhanCongLaiDTV || '',
+      qdKhoiTo: body.qdKhoiTo || '',
       hoSoHienHanh: Boolean(body.hoSoHienHanh),
       trichYeu: body.trichYeu || '',
       doi: body.doi,
@@ -261,6 +283,9 @@ app.put('/api/reports/:id', (req, res) => {
       soTap: body.soTap ?? existing.soTap,
       soHoSo: body.soHoSo ?? existing.soHoSo,
       soLuu: body.soLuu ?? existing.soLuu,
+      qdPhanCongPTT: body.qdPhanCongPTT ?? existing.qdPhanCongPTT ?? '',
+      qdPhanCongLaiDTV: body.qdPhanCongLaiDTV ?? existing.qdPhanCongLaiDTV ?? '',
+      qdKhoiTo: body.qdKhoiTo ?? existing.qdKhoiTo ?? '',
       hoSoHienHanh: body.hoSoHienHanh ?? existing.hoSoHienHanh ?? false,
       trichYeu: body.trichYeu ?? existing.trichYeu ?? '',
       doi: body.doi ?? existing.doi,

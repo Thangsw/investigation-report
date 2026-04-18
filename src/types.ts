@@ -6,6 +6,9 @@ export interface Report {
   soTap: string;
   soHoSo: string;
   soLuu: string;
+  qdPhanCongPTT: string;
+  qdPhanCongLaiDTV: string;
+  qdKhoiTo: string;
   hoSoHienHanh: boolean;
   trichYeu: string;
   doi: 'Đội 2' | 'Đội 3' | 'Đội 4';

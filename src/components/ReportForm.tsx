@@ -21,6 +21,9 @@ const EMPTY_FORM: FormState = {
   soTap: '',
   soHoSo: '',
   soLuu: '',
+  qdPhanCongPTT: '',
+  qdPhanCongLaiDTV: '',
+  qdKhoiTo: '',
   hoSoHienHanh: false,
   trichYeu: '',
   doi: 'Đội 2',
@@ -77,6 +80,9 @@ export default function ReportForm({
         soTap: editingReport.soTap,
         soHoSo: editingReport.soHoSo,
         soLuu: editingReport.soLuu,
+        qdPhanCongPTT: editingReport.qdPhanCongPTT || '',
+        qdPhanCongLaiDTV: editingReport.qdPhanCongLaiDTV || '',
+        qdKhoiTo: editingReport.qdKhoiTo || '',
         hoSoHienHanh: editingReport.hoSoHienHanh,
         trichYeu: editingReport.trichYeu || '',
         doi: editingReport.doi,
@@ -104,6 +110,8 @@ export default function ReportForm({
 
   const toBanDiaInvalid = submitted && !form.toBanDia;
   const soHoSoInvalid = submitted && !form.soHoSo.trim();
+  const qdPTTInvalid = submitted && !form.qdPhanCongPTT.trim();
+  const qdLaiDTVInvalid = submitted && !form.qdPhanCongLaiDTV.trim();
   const tinhChatInvalid = submitted && !form.tinhChatMucDoNghiemTrong.trim();
   const ngayInvalid = submitted && !form.ngayHetThoiHieuTruyCuuTNHS;
 
@@ -113,6 +121,8 @@ export default function ReportForm({
 
     if (!form.dtvName.trim()) { alert('Vui lòng nhập họ tên ĐTV'); return; }
     if (!form.soHoSo.trim()) return;
+    if (!form.qdPhanCongPTT.trim()) return;
+    if (!form.qdPhanCongLaiDTV.trim()) return;
     if (!form.tinhChatMucDoNghiemTrong.trim()) return;
     if (!form.ngayHetThoiHieuTruyCuuTNHS) return;
     if (!form.toBanDia) return;
@@ -221,6 +231,49 @@ export default function ReportForm({
           </label>
         </div>
       </div>
+
+      {/* QĐ phân công PTT */}
+      <div className="form-group">
+        <label>QĐ phân công PTT *</label>
+        <input
+          type="text"
+          className="form-control"
+          value={form.qdPhanCongPTT}
+          onChange={(e) => setField('qdPhanCongPTT', e.target.value)}
+          placeholder="Số/ký hiệu quyết định phân công PTT..."
+          autoComplete="off"
+        />
+        {qdPTTInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
+      </div>
+
+      {/* QĐ phân công lại ĐTV */}
+      <div className="form-group">
+        <label>QĐ phân công lại ĐTV *</label>
+        <input
+          type="text"
+          className="form-control"
+          value={form.qdPhanCongLaiDTV}
+          onChange={(e) => setField('qdPhanCongLaiDTV', e.target.value)}
+          placeholder="Số/ký hiệu quyết định phân công lại ĐTV..."
+          autoComplete="off"
+        />
+        {qdLaiDTVInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
+      </div>
+
+      {/* QĐ khởi tố — chỉ hiện với AK */}
+      {form.loaiHoSo === 'AK' && (
+        <div className="form-group">
+          <label>Quyết định khởi tố</label>
+          <input
+            type="text"
+            className="form-control"
+            value={form.qdKhoiTo}
+            onChange={(e) => setField('qdKhoiTo', e.target.value)}
+            placeholder="Số/ký hiệu quyết định khởi tố..."
+            autoComplete="off"
+          />
+        </div>
+      )}
 
       {/* Trích yếu */}
       <div className="form-group">
