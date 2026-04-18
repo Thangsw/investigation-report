@@ -1,11 +1,15 @@
 import type { Report } from '../types';
 import { EXTRACTED_CASE_TARGET, TOTAL_CASE_TARGET, getDashboardMetrics } from '../reportMetrics';
 
+export type SpotlightType = 'upcoming' | 'overdue' | 'difficulty';
+
 interface Props {
   reports: Report[];
+  spotlight?: SpotlightType | null;
+  onCardClick?: (type: SpotlightType) => void;
 }
 
-export default function StatsCards({ reports }: Props) {
+export default function StatsCards({ reports, spotlight, onCardClick }: Props) {
   const metrics = getDashboardMetrics(reports);
   const dtvEntries = Object.entries(metrics.byDTV).sort((a, b) => b[1] - a[1]);
   const maxDTV = dtvEntries[0]?.[1] || 1;
@@ -55,17 +59,29 @@ export default function StatsCards({ reports }: Props) {
             <div className="stat-value amber">{metrics.reassignedCount}</div>
             <div className="stat-label">Đã phân công lại</div>
           </div>
-          <div className="stat-card">
+          <div
+            className={`stat-card stat-card-clickable${spotlight === 'upcoming' ? ' stat-card-active' : ''}`}
+            onClick={() => onCardClick?.('upcoming')}
+            title="Xem danh sách"
+          >
             <div className="stat-value amber">{metrics.upcomingDeadlineCount}</div>
             <div className="stat-label">Sắp hết thời hiệu TNHS</div>
           </div>
-          <div className="stat-card">
+          <div
+            className={`stat-card stat-card-clickable${spotlight === 'overdue' ? ' stat-card-active' : ''}`}
+            onClick={() => onCardClick?.('overdue')}
+            title="Xem danh sách"
+          >
             <div className="stat-value" style={{ color: metrics.overdueDeadlineCount > 0 ? '#ff4757' : '#2ed573' }}>
               {metrics.overdueDeadlineCount}
             </div>
             <div className="stat-label">Quá thời hiệu TNHS</div>
           </div>
-          <div className="stat-card">
+          <div
+            className={`stat-card stat-card-clickable${spotlight === 'difficulty' ? ' stat-card-active' : ''}`}
+            onClick={() => onCardClick?.('difficulty')}
+            title="Xem danh sách"
+          >
             <div className="stat-value" style={{ color: metrics.difficultyCount > 0 ? '#ff9f43' : '#2ed573' }}>
               {metrics.difficultyCount}
             </div>

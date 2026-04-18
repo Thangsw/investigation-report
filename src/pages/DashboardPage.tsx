@@ -2,17 +2,19 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../api';
 import type { Report, Investigator, ReportFormData } from '../types';
-import StatsCards from '../components/StatsCards';
+import StatsCards, { type SpotlightType } from '../components/StatsCards';
 import FilterBar, { type Filters } from '../components/FilterBar';
 import ReportList from '../components/ReportList';
 import ExportButton from '../components/ExportButton';
 import ReportForm from '../components/ReportForm';
+import { getDeadlineStatus, hasDifficulty } from '../reportMetrics';
 
 export default function DashboardPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [investigators, setInvestigators] = useState<Investigator[]>([]);
   const [filters, setFilters] = useState<Filters>({ dtvName: '', loaiHoSo: '', doi: '', toBanDia: '' });
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [spotlight, setSpotlight] = useState<SpotlightType | null>(null);
 
   const fetchAll = useCallback(async () => {
     const [reportData, investigatorData] = await Promise.all([
@@ -53,6 +55,24 @@ export default function DashboardPage() {
     });
   }, [reports, filters]);
 
+  const spotlightReports = useMemo(() => {
+    if (!spotlight) return [];
+    if (spotlight === 'upcoming') return reports.filter((r) => getDeadlineStatus(r.ngayHetThoiHieuTruyCuuTNHS) === 'upcoming');
+    if (spotlight === 'overdue')  return reports.filter((r) => getDeadlineStatus(r.ngayHetThoiHieuTruyCuuTNHS) === 'overdue');
+    if (spotlight === 'difficulty') return reports.filter(hasDifficulty);
+    return [];
+  }, [reports, spotlight]);
+
+  const spotlightLabel: Record<SpotlightType, string> = {
+    upcoming:   'Sắp hết thời hiệu TNHS',
+    overdue:    'Quá thời hiệu TNHS',
+    difficulty: 'Có khó khăn / vướng mắc',
+  };
+
+  const handleCardClick = (type: SpotlightType) => {
+    setSpotlight((prev) => (prev === type ? null : type));
+  };
+
   return (
     <div>
       <div className="dashboard-toolbar glass-panel">
@@ -65,7 +85,23 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <StatsCards reports={reports} />
+      <StatsCards reports={reports} spotlight={spotlight} onCardClick={handleCardClick} />
+
+      {spotlight && (
+        <div className="spotlight-panel glass-panel">
+          <div className="section-header" style={{ marginBottom: 10 }}>
+            <span className="section-title">
+              {spotlightLabel[spotlight]} ({spotlightReports.length})
+            </span>
+            <button className="btn-search-toggle active" onClick={() => setSpotlight(null)}>
+              <X size={13} /> Đóng
+            </button>
+          </div>
+          {spotlightReports.length === 0
+            ? <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Không có hồ sơ nào.</p>
+            : <ReportList reports={spotlightReports} />}
+        </div>
+      )}
 
       <div className="section-header">
         <span className="section-title">
