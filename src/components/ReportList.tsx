@@ -11,6 +11,15 @@ interface Props {
 function formatDate(dateStr: string): string {
   if (!dateStr) return '—';
   const [year, month, day] = dateStr.split('-');
+  return `${parseInt(day, 10)}/${month}/${year}`;
+}
+
+function formatDateTime(isoStr: string): string {
+  const d = new Date(isoStr);
+  if (Number.isNaN(d.getTime())) return '—';
+  const day = d.getDate();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
   return `${day}/${month}/${year}`;
 }
 
@@ -37,7 +46,7 @@ export default function ReportList({ reports, onEdit, onDelete }: Props) {
         const isUpcoming = deadlineStatus === 'upcoming';
         const isOverdue = deadlineStatus === 'overdue';
         const daysUntilDeadline = getDaysUntilDeadline(report.ngayHetThoiHieuTruyCuuTNHS);
-        const createdAt = new Date(report.createdAt).toLocaleDateString('vi-VN');
+        const createdAt = formatDateTime(report.createdAt);
 
         return (
           <div key={report.id} className={`point-item ${report.loaiHoSo === 'AK' ? 'ak' : 'ad'}`}>
