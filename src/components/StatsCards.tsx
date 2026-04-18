@@ -6,21 +6,25 @@ export type SpotlightType = 'upcoming' | 'overdue' | 'difficulty';
 interface Props {
   reports: Report[];
   totalCaseTarget: number;
+  akTarget: number;
+  adTarget: number;
   spotlight?: SpotlightType | null;
   onCardClick?: (type: SpotlightType) => void;
 }
 
-export default function StatsCards({ reports, totalCaseTarget, spotlight, onCardClick }: Props) {
+export default function StatsCards({ reports, totalCaseTarget, akTarget, adTarget, spotlight, onCardClick }: Props) {
   const metrics = getDashboardMetrics(reports, totalCaseTarget);
   const dtvEntries = Object.entries(metrics.byDTV).sort((a, b) => b[1] - a[1]);
   const maxDTV = dtvEntries[0]?.[1] || 1;
   const completionRateLabel = `${metrics.completionRate.toFixed(1)}%`;
+  const akRate = akTarget > 0 ? ((metrics.akCount / akTarget) * 100).toFixed(1) : '0.0';
+  const adRate = adTarget > 0 ? ((metrics.adCount / adTarget) * 100).toFixed(1) : '0.0';
 
   return (
     <>
       <div className="section-card glass-panel">
         <div className="section-title" style={{ marginBottom: 12 }}>Tổng số vụ án, vụ việc tạm đình chỉ đến 22/03/2026</div>
-        <div className="stats-grid stats-grid-4" style={{ marginBottom: 0 }}>
+        <div className="stats-grid stats-grid-4" style={{ marginBottom: 12 }}>
           <div className="stat-card">
             <div className="stat-value">{totalCaseTarget}</div>
             <div className="stat-label">Cần thực hiện</div>
@@ -36,6 +40,42 @@ export default function StatsCards({ reports, totalCaseTarget, spotlight, onCard
           <div className="stat-card">
             <div className="stat-value green">{completionRateLabel}</div>
             <div className="stat-label">Tỉ lệ</div>
+          </div>
+        </div>
+        <div className="stats-grid stats-grid-4" style={{ marginBottom: 0 }}>
+          <div className="stat-card">
+            <div className="stat-value">{akTarget}</div>
+            <div className="stat-label">AK cần thực hiện</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value blue">{metrics.akCount}</div>
+            <div className="stat-label">AK đã thực hiện</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">{adTarget}</div>
+            <div className="stat-label">AD cần thực hiện</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value blue">{metrics.adCount}</div>
+            <div className="stat-label">AD đã thực hiện</div>
+          </div>
+        </div>
+        <div className="stats-grid stats-grid-4" style={{ marginTop: 8, marginBottom: 0 }}>
+          <div className="stat-card">
+            <div className="stat-value amber">{Math.max(akTarget - metrics.akCount, 0)}</div>
+            <div className="stat-label">AK còn lại</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value green">{akRate}%</div>
+            <div className="stat-label">Tỉ lệ AK</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value amber">{Math.max(adTarget - metrics.adCount, 0)}</div>
+            <div className="stat-label">AD còn lại</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value green">{adRate}%</div>
+            <div className="stat-label">Tỉ lệ AD</div>
           </div>
         </div>
       </div>

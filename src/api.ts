@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Report, Investigator, ReportFormData } from './types';
+import type { Report, Investigator, ReportFormData, AppConfig } from './types';
 
 export const api = {
   // ── Reports ──────────────────────────────────────────────────────────────
@@ -26,10 +26,10 @@ export const api = {
 
   // ── Config ───────────────────────────────────────────────────────────────
   getConfig: () =>
-    axios.get<{ totalCaseTarget: number }>('/api/config').then(r => r.data),
+    axios.get<AppConfig>('/api/config').then(r => r.data),
 
-  updateConfig: (totalCaseTarget: number) =>
-    axios.post<{ totalCaseTarget: number }>('/api/config', { totalCaseTarget }).then(r => r.data),
+  updateConfig: (config: Partial<AppConfig>) =>
+    axios.post<AppConfig>('/api/config', config).then(r => r.data),
 
   // ── Investigators ─────────────────────────────────────────────────────────
   getInvestigators: () =>

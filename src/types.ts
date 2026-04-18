@@ -28,4 +28,25 @@ export interface Investigator {
   name: string;
 }
 
+export interface RequiredFields {
+  soHoSo: boolean;
+  toBanDia: boolean;
+  ngayHetThoiHieuTruyCuuTNHS: boolean;
+  tinhChatMucDoNghiemTrong: boolean;
+  trichYeu: boolean;
+  qdPhanCongPTT: boolean;
+  qdPhanCongLaiDTV: boolean;
+  qdKhoiTo: boolean;
+  tinhTrang: boolean;
+  ketQuaGiaiQuyet: boolean;
+  khoKhan: boolean;
+}
+
+export interface AppConfig {
+  totalCaseTarget: number;
+  akTarget: number;
+  adTarget: number;
+  requiredFields: RequiredFields;
+}
+
 export type ReportFormData = Omit<Report, 'id' | 'createdAt' | 'updatedAt'>;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Users, X, Search } from 'lucide-react';
 import { api } from '../api';
-import type { Report, Investigator, ReportFormData } from '../types';
+import type { Report, Investigator, ReportFormData, AppConfig } from '../types';
 import FilterBar, { type Filters } from '../components/FilterBar';
 import ReportForm from '../components/ReportForm';
 import ReportList from '../components/ReportList';
@@ -15,6 +15,7 @@ const EMPTY_FILTERS: Filters = { dtvName: '', loaiHoSo: '', doi: '', toBanDia: '
 export default function ReportPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [investigators, setInvestigators] = useState<Investigator[]>([]);
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [sheetOpen, setSheetOpen] = useState<SheetType>(null);
   const [myName, setMyName] = useState('');
@@ -22,12 +23,14 @@ export default function ReportPage() {
   const [searchFilters, setSearchFilters] = useState<Filters>(EMPTY_FILTERS);
 
   const fetchAll = useCallback(async () => {
-    const [reportData, investigatorData] = await Promise.all([
+    const [reportData, investigatorData, configData] = await Promise.all([
       api.getReports(),
       api.getInvestigators(),
+      api.getConfig(),
     ]);
     setReports(reportData);
     setInvestigators(investigatorData);
+    setAppConfig(configData);
   }, []);
 
   useEffect(() => {
@@ -230,6 +233,7 @@ export default function ReportPage() {
           investigators={investigators}
           editingReport={editingReport}
           prefillDTV={myNameTrimmed || undefined}
+          requiredFields={appConfig?.requiredFields}
           onSubmit={handleSubmit}
           onCancel={closeSheet}
         />

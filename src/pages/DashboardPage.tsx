@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../api';
-import type { Report, Investigator, ReportFormData } from '../types';
+import type { Report, Investigator, ReportFormData, AppConfig } from '../types';
 import StatsCards, { type SpotlightType } from '../components/StatsCards';
 import FilterBar, { type Filters } from '../components/FilterBar';
 import ReportList from '../components/ReportList';
@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [spotlight, setSpotlight] = useState<SpotlightType | null>(null);
   const [totalCaseTarget, setTotalCaseTarget] = useState(DEFAULT_TOTAL_CASE_TARGET);
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
 
   const fetchAll = useCallback(async () => {
     const [reportData, investigatorData, configData] = await Promise.all([
@@ -26,6 +27,7 @@ export default function DashboardPage() {
     setReports(reportData);
     setInvestigators(investigatorData);
     setTotalCaseTarget(configData.totalCaseTarget);
+    setAppConfig(configData);
   }, []);
 
   useEffect(() => {
@@ -88,7 +90,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <StatsCards reports={reports} totalCaseTarget={totalCaseTarget} spotlight={spotlight} onCardClick={handleCardClick} />
+      <StatsCards
+        reports={reports}
+        totalCaseTarget={totalCaseTarget}
+        akTarget={appConfig?.akTarget ?? 372}
+        adTarget={appConfig?.adTarget ?? 238}
+        spotlight={spotlight}
+        onCardClick={handleCardClick}
+      />
 
       {spotlight && (
         <div className="spotlight-panel glass-panel">
@@ -132,6 +141,7 @@ export default function DashboardPage() {
         <ReportForm
           investigators={investigators}
           editingReport={null}
+          requiredFields={appConfig?.requiredFields}
           onSubmit={handleCreateReport}
           onCancel={closeSheet}
         />

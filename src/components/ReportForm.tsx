@@ -1,6 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Send } from 'lucide-react';
-import type { Report, Investigator, ReportFormData } from '../types';
+import type { Report, Investigator, ReportFormData, RequiredFields } from '../types';
+
+const DEFAULT_REQUIRED: RequiredFields = {
+  soHoSo: true,
+  toBanDia: true,
+  ngayHetThoiHieuTruyCuuTNHS: true,
+  tinhChatMucDoNghiemTrong: true,
+  trichYeu: false,
+  qdPhanCongPTT: false,
+  qdPhanCongLaiDTV: false,
+  qdKhoiTo: false,
+  tinhTrang: false,
+  ketQuaGiaiQuyet: false,
+  khoKhan: false,
+};
 
 const SEVERITY_PRESETS = [
   'Ít nghiêm trọng',
@@ -56,6 +70,7 @@ interface Props {
   investigators: Investigator[];
   editingReport: Report | null;
   prefillDTV?: string;
+  requiredFields?: Partial<RequiredFields>;
   onSubmit: (data: ReportFormData) => Promise<void>;
   onCancel: () => void;
 }
@@ -64,9 +79,11 @@ export default function ReportForm({
   investigators,
   editingReport,
   prefillDTV,
+  requiredFields,
   onSubmit,
   onCancel,
 }: Props) {
+  const req: RequiredFields = { ...DEFAULT_REQUIRED, ...requiredFields };
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -106,27 +123,40 @@ export default function ReportForm({
 
   // Inline validation
   const trichYeuInvalid =
-    submitted &&
-    form.trichYeu.trim().length > 0 &&
-    !hasLocationKeyword(form.trichYeu);
+    submitted && (
+      (req.trichYeu && !form.trichYeu.trim()) ||
+      (form.trichYeu.trim().length > 0 && !hasLocationKeyword(form.trichYeu))
+    );
 
-  const toBanDiaInvalid = submitted && !form.toBanDia;
-  const soHoSoInvalid = submitted && !form.soHoSo.trim();
-  const tinhChatInvalid = submitted && !form.tinhChatMucDoNghiemTrong.trim();
-  const ngayInvalid = submitted && !form.ngayHetThoiHieuTruyCuuTNHS;
+  const toBanDiaInvalid = submitted && req.toBanDia && !form.toBanDia;
+  const soHoSoInvalid = submitted && req.soHoSo && !form.soHoSo.trim();
+  const tinhChatInvalid = submitted && req.tinhChatMucDoNghiemTrong && !form.tinhChatMucDoNghiemTrong.trim();
+  const ngayInvalid = submitted && req.ngayHetThoiHieuTruyCuuTNHS && !form.ngayHetThoiHieuTruyCuuTNHS;
+  const qdPTTInvalid = submitted && req.qdPhanCongPTT && !form.qdPhanCongPTT.trim();
+  const qdDTVInvalid = submitted && req.qdPhanCongLaiDTV && !form.qdPhanCongLaiDTV.trim();
+  const qdKhoiToInvalid = submitted && req.qdKhoiTo && form.loaiHoSo === 'AK' && !form.qdKhoiTo.trim();
+  const tinhTrangInvalid = submitted && req.tinhTrang && !form.tinhTrang.trim();
+  const ketQuaInvalid = submitted && req.ketQuaGiaiQuyet && !form.ketQuaGiaiQuyet.trim();
+  const khoKhanInvalid = submitted && req.khoKhan && !form.khoKhan.trim();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitted(true);
 
     if (!form.dtvName.trim()) { alert('Vui lòng nhập họ tên ĐTV'); return; }
-    if (!form.soHoSo.trim()) return;
+    if (req.soHoSo && !form.soHoSo.trim()) return;
+    if (req.tinhChatMucDoNghiemTrong && !form.tinhChatMucDoNghiemTrong.trim()) return;
+    if (req.ngayHetThoiHieuTruyCuuTNHS && !form.ngayHetThoiHieuTruyCuuTNHS) return;
+    if (req.toBanDia && !form.toBanDia) return;
+    if (req.qdPhanCongPTT && !form.qdPhanCongPTT.trim()) return;
+    if (req.qdPhanCongLaiDTV && !form.qdPhanCongLaiDTV.trim()) return;
+    if (req.qdKhoiTo && form.loaiHoSo === 'AK' && !form.qdKhoiTo.trim()) return;
+    if (req.tinhTrang && !form.tinhTrang.trim()) return;
+    if (req.ketQuaGiaiQuyet && !form.ketQuaGiaiQuyet.trim()) return;
+    if (req.khoKhan && !form.khoKhan.trim()) return;
+    if (req.trichYeu && !form.trichYeu.trim()) return;
 
-    if (!form.tinhChatMucDoNghiemTrong.trim()) return;
-    if (!form.ngayHetThoiHieuTruyCuuTNHS) return;
-    if (!form.toBanDia) return;
-
-    // Block nếu trích yếu không có địa danh
+    // Block nếu trích yếu không có địa danh (dù bắt buộc hay không)
     if (form.trichYeu.trim() && !hasLocationKeyword(form.trichYeu)) return;
 
     const data: ReportFormData = {
@@ -214,7 +244,7 @@ export default function ReportForm({
             onChange={(e) => setField('soTap', e.target.value)} />
         </div>
         <div className="form-group">
-          <label>Số hồ sơ *</label>
+          <label>Số hồ sơ{req.soHoSo ? ' *' : ''}</label>
           <input type="text" className="form-control" value={form.soHoSo}
             onChange={(e) => setField('soHoSo', e.target.value)} />
           {soHoSoInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
@@ -233,7 +263,7 @@ export default function ReportForm({
 
       {/* QĐ phân công PTT */}
       <div className="form-group">
-        <label>QĐ phân công PTT</label>
+        <label>QĐ phân công PTT{req.qdPhanCongPTT ? ' *' : ''}</label>
         <input
           type="text"
           className="form-control"
@@ -242,11 +272,12 @@ export default function ReportForm({
           placeholder="Số/ký hiệu quyết định phân công PTT..."
           autoComplete="off"
         />
+        {qdPTTInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
       </div>
 
       {/* QĐ phân công lại ĐTV */}
       <div className="form-group">
-        <label>QĐ phân công lại ĐTV</label>
+        <label>QĐ phân công lại ĐTV{req.qdPhanCongLaiDTV ? ' *' : ''}</label>
         <input
           type="text"
           className="form-control"
@@ -255,12 +286,13 @@ export default function ReportForm({
           placeholder="Số/ký hiệu quyết định phân công lại ĐTV..."
           autoComplete="off"
         />
+        {qdDTVInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
       </div>
 
       {/* QĐ khởi tố — chỉ hiện với AK */}
       {form.loaiHoSo === 'AK' && (
         <div className="form-group">
-          <label>Quyết định khởi tố</label>
+          <label>Quyết định khởi tố{req.qdKhoiTo ? ' *' : ''}</label>
           <input
             type="text"
             className="form-control"
@@ -269,12 +301,13 @@ export default function ReportForm({
             placeholder="Số/ký hiệu quyết định khởi tố..."
             autoComplete="off"
           />
+          {qdKhoiToInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
         </div>
       )}
 
       {/* Trích yếu */}
       <div className="form-group">
-        <label>Trích yếu</label>
+        <label>Trích yếu{req.trichYeu ? ' *' : ''}</label>
         <textarea
           className="form-control"
           rows={3}
@@ -300,7 +333,7 @@ export default function ReportForm({
 
       {/* Tổ địa bàn */}
       <div className="form-group">
-        <label>Tổ địa bàn *</label>
+        <label>Tổ địa bàn{req.toBanDia ? ' *' : ''}</label>
         <div className="radio-group">
           {(['Hoà Bình', 'Lạc Thuỷ'] as const).map((tob) => {
             const key = tob === 'Hoà Bình' ? 'hb' : 'lt';
@@ -326,7 +359,7 @@ export default function ReportForm({
 
       {/* Ngày hết thời hiệu */}
       <div className="form-group">
-        <label>Ngày hết thời hiệu truy cứu TNHS *</label>
+        <label>Ngày hết thời hiệu truy cứu TNHS{req.ngayHetThoiHieuTruyCuuTNHS ? ' *' : ''}</label>
         <input
           type="date"
           className="form-control"
@@ -346,7 +379,7 @@ export default function ReportForm({
 
       {/* Tính chất */}
       <div className="form-group">
-        <label>Tính chất, mức độ nghiêm trọng *</label>
+        <label>Tính chất, mức độ nghiêm trọng{req.tinhChatMucDoNghiemTrong ? ' *' : ''}</label>
         <input
           type="text"
           className="form-control"
@@ -364,7 +397,7 @@ export default function ReportForm({
 
       {/* Tình trạng */}
       <div className="form-group">
-        <label>Tình trạng hiện tại</label>
+        <label>Tình trạng hiện tại{req.tinhTrang ? ' *' : ''}</label>
         <input
           type="text"
           className="form-control"
@@ -383,11 +416,12 @@ export default function ReportForm({
           <option value="Tạm đình chỉ điều tra" />
           <option value="Chờ kết luận giám định" />
         </datalist>
+        {tinhTrangInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
       </div>
 
       {/* Kết quả */}
       <div className="form-group">
-        <label>Kết quả giải quyết</label>
+        <label>Kết quả giải quyết{req.ketQuaGiaiQuyet ? ' *' : ''}</label>
         <input
           type="text"
           className="form-control"
@@ -396,11 +430,12 @@ export default function ReportForm({
           placeholder="Nhập kết quả giải quyết..."
           autoComplete="off"
         />
+        {ketQuaInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
       </div>
 
       {/* Khó khăn */}
       <div className="form-group">
-        <label>Khó khăn, vướng mắc, đề xuất</label>
+        <label>Khó khăn, vướng mắc, đề xuất{req.khoKhan ? ' *' : ''}</label>
         <textarea
           className="form-control"
           rows={3}
@@ -408,6 +443,7 @@ export default function ReportForm({
           onChange={(e) => setField('khoKhan', e.target.value)}
           placeholder="Không tìm thấy trên phần mềm ĐTHS, Không có đầy đủ tài liệu v.v..."
         />
+        {khoKhanInvalid && <span style={errStyle}>Nhập đầy đủ thông tin</span>}
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>

@@ -12,7 +12,24 @@ const reportsFile = path.join(DATA_DIR, 'reports.json');
 const investigatorsFile = path.join(DATA_DIR, 'investigators.json');
 const configFile = path.join(DATA_DIR, 'config.json');
 
-const DEFAULT_CONFIG = { totalCaseTarget: 610 };
+const DEFAULT_CONFIG = {
+  totalCaseTarget: 610,
+  akTarget: 372,
+  adTarget: 238,
+  requiredFields: {
+    soHoSo: true,
+    toBanDia: true,
+    ngayHetThoiHieuTruyCuuTNHS: true,
+    tinhChatMucDoNghiemTrong: true,
+    trichYeu: false,
+    qdPhanCongPTT: false,
+    qdPhanCongLaiDTV: false,
+    qdKhoiTo: false,
+    tinhTrang: false,
+    ketQuaGiaiQuyet: false,
+    khoKhan: false,
+  },
+};
 const readConfig = () => {
   if (!fs.existsSync(configFile)) return { ...DEFAULT_CONFIG };
   try { return { ...DEFAULT_CONFIG, ...JSON.parse(fs.readFileSync(configFile, 'utf8')) }; }
@@ -382,12 +399,16 @@ app.get('/api/config', (_req, res) => {
 
 app.post('/api/config', (req, res) => {
   try {
-    const { totalCaseTarget } = req.body;
-    if (typeof totalCaseTarget !== 'number' || totalCaseTarget <= 0 || !Number.isInteger(totalCaseTarget)) {
-      return res.status(400).json({ error: 'totalCaseTarget phải là số nguyên dương' });
+    const current = readConfig();
+    const updated = { ...current };
+    if (typeof req.body.totalCaseTarget === 'number' && req.body.totalCaseTarget > 0) updated.totalCaseTarget = Math.round(req.body.totalCaseTarget);
+    if (typeof req.body.akTarget === 'number' && req.body.akTarget >= 0) updated.akTarget = Math.round(req.body.akTarget);
+    if (typeof req.body.adTarget === 'number' && req.body.adTarget >= 0) updated.adTarget = Math.round(req.body.adTarget);
+    if (req.body.requiredFields && typeof req.body.requiredFields === 'object') {
+      updated.requiredFields = { ...DEFAULT_CONFIG.requiredFields, ...req.body.requiredFields };
     }
-    writeConfig({ totalCaseTarget });
-    res.json({ message: 'Cập nhật thành công', totalCaseTarget });
+    writeConfig(updated);
+    res.json(updated);
   } catch (err) {
     res.status(500).json({ error: 'Lỗi lưu cấu hình' });
   }
