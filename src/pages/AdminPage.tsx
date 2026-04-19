@@ -36,6 +36,7 @@ export default function AdminPage() {
   const [akInput, setAkInput] = useState('');
   const [adInput, setAdInput] = useState('');
   const [statsToBanDia, setStatsToBanDia] = useState<'' | 'Hoà Bình' | 'Lạc Thuỷ'>('');
+  const [sheetsViewUrl, setSheetsViewUrl] = useState('');
   const [reqFields, setReqFields] = useState<RequiredFields>(DEFAULT_REQUIRED);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -47,6 +48,7 @@ export default function AdminPage() {
       setAkInput(String(cfg.akTarget));
       setAdInput(String(cfg.adTarget));
       setStatsToBanDia(cfg.statsToBanDia ?? '');
+      setSheetsViewUrl(cfg.sheetsViewUrl ?? '');
       setReqFields({ ...DEFAULT_REQUIRED, ...cfg.requiredFields });
     });
   }, []);
@@ -67,6 +69,7 @@ export default function AdminPage() {
         akTarget: ak,
         adTarget: ad,
         statsToBanDia,
+        sheetsViewUrl,
         requiredFields: reqFields,
       });
       setConfig(res);
@@ -143,6 +146,23 @@ export default function AdminPage() {
                 {val === '' ? 'Tất cả' : val}
               </label>
             ))}
+          </div>
+        </div>
+
+        {/* ── URL trang tính Google Sheets ── */}
+        <div className="glass-panel" style={{ padding: 24, marginBottom: 16 }}>
+          <h2 style={{ marginBottom: 6, fontSize: '1.05rem' }}>Liên kết trang tính Google Sheets</h2>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 12 }}>
+            Dán URL Google Sheets vào đây để hiển thị nút "Xem trang tính" trên báo cáo tổng hợp.
+          </p>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <input
+              type="url"
+              className="form-control"
+              value={sheetsViewUrl}
+              onChange={(e) => setSheetsViewUrl(e.target.value)}
+              placeholder="https://docs.google.com/spreadsheets/d/..."
+            />
           </div>
         </div>
 

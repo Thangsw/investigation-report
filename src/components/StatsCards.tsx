@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { Report } from '../types';
 import { getDashboardMetrics } from '../reportMetrics';
 
@@ -11,9 +12,10 @@ interface Props {
   statsToBanDia?: string;
   spotlight?: SpotlightType | null;
   onCardClick?: (type: SpotlightType) => void;
+  spotlightPanel?: ReactNode;
 }
 
-export default function StatsCards({ reports, totalCaseTarget, akTarget, adTarget, statsToBanDia, spotlight, onCardClick }: Props) {
+export default function StatsCards({ reports, totalCaseTarget, akTarget, adTarget, statsToBanDia, spotlight, onCardClick, spotlightPanel }: Props) {
   const metrics = getDashboardMetrics(reports, totalCaseTarget);
   const dtvEntries = Object.entries(metrics.byDTV).sort((a, b) => b[1] - a[1]);
   const maxDTV = dtvEntries[0]?.[1] || 1;
@@ -133,6 +135,8 @@ export default function StatsCards({ reports, totalCaseTarget, akTarget, adTarge
           </div>
         </div>
       </div>
+
+      {spotlightPanel}
 
       <div className="section-card glass-panel">
         <div className="section-title" style={{ marginBottom: 12 }}>Phân bố hồ sơ đã cập nhật</div>

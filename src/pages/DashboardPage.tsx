@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { X } from 'lucide-react';
+import { X, ExternalLink } from 'lucide-react';
 import { api } from '../api';
 import type { Report, Investigator, ReportFormData, AppConfig } from '../types';
 import StatsCards, { type SpotlightType } from '../components/StatsCards';
@@ -94,6 +94,18 @@ export default function DashboardPage() {
           <button type="button" className="btn-primary-cta" onClick={() => setSheetOpen(true)}>
             Thêm hồ sơ đã làm
           </button>
+          {appConfig?.sheetsViewUrl && (
+            <a
+              href={appConfig.sheetsViewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-export"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}
+            >
+              <ExternalLink size={14} />
+              Xem trang tính
+            </a>
+          )}
           <ExportButton filters={filters} />
         </div>
       </div>
@@ -106,23 +118,22 @@ export default function DashboardPage() {
         statsToBanDia={statsToBanDia}
         spotlight={spotlight}
         onCardClick={handleCardClick}
-      />
-
-      {spotlight && (
-        <div className="spotlight-panel glass-panel">
-          <div className="section-header" style={{ marginBottom: 10 }}>
-            <span className="section-title">
-              {spotlightLabel[spotlight]} ({spotlightReports.length})
-            </span>
-            <button className="btn-search-toggle active" onClick={() => setSpotlight(null)}>
-              <X size={13} /> Đóng
-            </button>
+        spotlightPanel={spotlight ? (
+          <div className="spotlight-panel glass-panel">
+            <div className="section-header" style={{ marginBottom: 10 }}>
+              <span className="section-title">
+                {spotlightLabel[spotlight]} ({spotlightReports.length})
+              </span>
+              <button className="btn-search-toggle active" onClick={() => setSpotlight(null)}>
+                <X size={13} /> Đóng
+              </button>
+            </div>
+            {spotlightReports.length === 0
+              ? <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Không có hồ sơ nào.</p>
+              : <ReportList reports={spotlightReports} />}
           </div>
-          {spotlightReports.length === 0
-            ? <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Không có hồ sơ nào.</p>
-            : <ReportList reports={spotlightReports} />}
-        </div>
-      )}
+        ) : null}
+      />
 
       <div className="section-header">
         <span className="section-title">
