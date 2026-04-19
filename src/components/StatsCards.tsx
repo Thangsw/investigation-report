@@ -8,11 +8,12 @@ interface Props {
   totalCaseTarget: number;
   akTarget: number;
   adTarget: number;
+  statsToBanDia?: string;
   spotlight?: SpotlightType | null;
   onCardClick?: (type: SpotlightType) => void;
 }
 
-export default function StatsCards({ reports, totalCaseTarget, akTarget, adTarget, spotlight, onCardClick }: Props) {
+export default function StatsCards({ reports, totalCaseTarget, akTarget, adTarget, statsToBanDia, spotlight, onCardClick }: Props) {
   const metrics = getDashboardMetrics(reports, totalCaseTarget);
   const dtvEntries = Object.entries(metrics.byDTV).sort((a, b) => b[1] - a[1]);
   const maxDTV = dtvEntries[0]?.[1] || 1;
@@ -23,7 +24,14 @@ export default function StatsCards({ reports, totalCaseTarget, akTarget, adTarge
   return (
     <>
       <div className="section-card glass-panel">
-        <div className="section-title" style={{ marginBottom: 12 }}>Tổng số vụ án, vụ việc tạm đình chỉ đến 22/03/2026</div>
+        <div className="section-title" style={{ marginBottom: 12 }}>
+          Tổng số vụ án, vụ việc tạm đình chỉ đến 22/03/2026
+          {statsToBanDia && (
+            <span style={{ marginLeft: 8, fontSize: '0.8rem', fontWeight: 400, color: '#ff4757' }}>
+              — Tổ {statsToBanDia}
+            </span>
+          )}
+        </div>
         <div className="stats-grid stats-grid-4" style={{ marginBottom: 12 }}>
           <div className="stat-card">
             <div className="stat-value">{totalCaseTarget}</div>

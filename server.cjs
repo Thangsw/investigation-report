@@ -16,6 +16,7 @@ const DEFAULT_CONFIG = {
   totalCaseTarget: 610,
   akTarget: 372,
   adTarget: 238,
+  statsToBanDia: '',
   requiredFields: {
     soHoSo: true,
     toBanDia: true,
@@ -404,6 +405,7 @@ app.post('/api/config', (req, res) => {
     if (typeof req.body.totalCaseTarget === 'number' && req.body.totalCaseTarget > 0) updated.totalCaseTarget = Math.round(req.body.totalCaseTarget);
     if (typeof req.body.akTarget === 'number' && req.body.akTarget >= 0) updated.akTarget = Math.round(req.body.akTarget);
     if (typeof req.body.adTarget === 'number' && req.body.adTarget >= 0) updated.adTarget = Math.round(req.body.adTarget);
+    if (['', 'Hoà Bình', 'Lạc Thuỷ'].includes(req.body.statsToBanDia)) updated.statsToBanDia = req.body.statsToBanDia;
     if (req.body.requiredFields && typeof req.body.requiredFields === 'object') {
       updated.requiredFields = { ...DEFAULT_CONFIG.requiredFields, ...req.body.requiredFields };
     }

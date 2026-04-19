@@ -35,6 +35,7 @@ export default function AdminPage() {
   const [totalInput, setTotalInput] = useState('');
   const [akInput, setAkInput] = useState('');
   const [adInput, setAdInput] = useState('');
+  const [statsToBanDia, setStatsToBanDia] = useState<'' | 'Hoà Bình' | 'Lạc Thuỷ'>('');
   const [reqFields, setReqFields] = useState<RequiredFields>(DEFAULT_REQUIRED);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -45,6 +46,7 @@ export default function AdminPage() {
       setTotalInput(String(cfg.totalCaseTarget));
       setAkInput(String(cfg.akTarget));
       setAdInput(String(cfg.adTarget));
+      setStatsToBanDia(cfg.statsToBanDia ?? '');
       setReqFields({ ...DEFAULT_REQUIRED, ...cfg.requiredFields });
     });
   }, []);
@@ -64,6 +66,7 @@ export default function AdminPage() {
         totalCaseTarget: total,
         akTarget: ak,
         adTarget: ad,
+        statsToBanDia,
         requiredFields: reqFields,
       });
       setConfig(res);
@@ -106,6 +109,40 @@ export default function AdminPage() {
               <input type="number" className="form-control" min={0} value={adInput}
                 onChange={(e) => setAdInput(e.target.value)} />
             </div>
+          </div>
+        </div>
+
+        {/* ── Lọc thống kê theo tổ địa bàn ── */}
+        <div className="glass-panel" style={{ padding: 24, marginBottom: 16 }}>
+          <h2 style={{ marginBottom: 6, fontSize: '1.05rem' }}>Lọc thống kê theo tổ địa bàn</h2>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+            Khi chọn một tổ, phần "Tổng số vụ án…" trên báo cáo tổng hợp chỉ tính hồ sơ của tổ đó.
+          </p>
+          <div style={{ display: 'flex', gap: 16 }}>
+            {(['', 'Hoà Bình', 'Lạc Thuỷ'] as const).map((val) => (
+              <label
+                key={val}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: statsToBanDia === val ? 700 : 400,
+                  color: statsToBanDia === val ? 'var(--text-primary)' : 'var(--text-secondary)',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="statsToBanDia"
+                  value={val}
+                  checked={statsToBanDia === val}
+                  onChange={() => setStatsToBanDia(val)}
+                  style={{ accentColor: '#ff4757', cursor: 'pointer' }}
+                />
+                {val === '' ? 'Tất cả' : val}
+              </label>
+            ))}
           </div>
         </div>
 

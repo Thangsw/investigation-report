@@ -50,6 +50,13 @@ export default function DashboardPage() {
     await fetchAll();
   };
 
+  const statsToBanDia = appConfig?.statsToBanDia ?? '';
+
+  const statsReports = useMemo(() => {
+    if (!statsToBanDia) return reports;
+    return reports.filter((r) => (r.toBanDia ?? 'Hoà Bình') === statsToBanDia);
+  }, [reports, statsToBanDia]);
+
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
       if (filters.dtvName && report.dtvName !== filters.dtvName) return false;
@@ -62,11 +69,12 @@ export default function DashboardPage() {
 
   const spotlightReports = useMemo(() => {
     if (!spotlight) return [];
-    if (spotlight === 'upcoming') return reports.filter((r) => !r.daThucHien && getDeadlineStatus(r.ngayHetThoiHieuTruyCuuTNHS) === 'upcoming');
-    if (spotlight === 'overdue')  return reports.filter((r) => !r.daThucHien && getDeadlineStatus(r.ngayHetThoiHieuTruyCuuTNHS) === 'overdue');
-    if (spotlight === 'difficulty') return reports.filter(hasDifficulty);
+    const base = statsToBanDia ? reports.filter((r) => (r.toBanDia ?? 'Hoà Bình') === statsToBanDia) : reports;
+    if (spotlight === 'upcoming') return base.filter((r) => !r.daThucHien && getDeadlineStatus(r.ngayHetThoiHieuTruyCuuTNHS) === 'upcoming');
+    if (spotlight === 'overdue')  return base.filter((r) => !r.daThucHien && getDeadlineStatus(r.ngayHetThoiHieuTruyCuuTNHS) === 'overdue');
+    if (spotlight === 'difficulty') return base.filter(hasDifficulty);
     return [];
-  }, [reports, spotlight]);
+  }, [reports, spotlight, statsToBanDia]);
 
   const spotlightLabel: Record<SpotlightType, string> = {
     upcoming:   'Sắp hết thời hiệu TNHS',
@@ -91,10 +99,11 @@ export default function DashboardPage() {
       </div>
 
       <StatsCards
-        reports={reports}
+        reports={statsReports}
         totalCaseTarget={totalCaseTarget}
         akTarget={appConfig?.akTarget ?? 372}
         adTarget={appConfig?.adTarget ?? 238}
+        statsToBanDia={statsToBanDia}
         spotlight={spotlight}
         onCardClick={handleCardClick}
       />
