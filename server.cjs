@@ -396,7 +396,12 @@ app.delete('/api/investigators/:id', (req, res) => {
 });
 
 app.get('/api/config', (_req, res) => {
-  res.json(readConfig());
+  const cfg = readConfig();
+  // Env var takes priority over admin-configured URL
+  if (process.env.GOOGLE_SHEETS_VIEW_URL) {
+    cfg.sheetsViewUrl = process.env.GOOGLE_SHEETS_VIEW_URL;
+  }
+  res.json(cfg);
 });
 
 app.post('/api/config', (req, res) => {
