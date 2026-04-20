@@ -10,7 +10,7 @@ import ExportButton from '../components/ExportButton';
 
 type SheetType = 'form' | 'dtv' | null;
 
-const EMPTY_FILTERS: Filters = { dtvName: '', loaiHoSo: '', doi: '', toBanDia: '' };
+const EMPTY_FILTERS: Filters = { dtvName: '', loaiHoSo: '', doi: '', toBanDia: '', trichYeu: '' };
 
 export default function ReportPage() {
   const [reports, setReports] = useState<Report[]>([]);
