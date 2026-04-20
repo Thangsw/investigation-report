@@ -8,6 +8,7 @@ import ReportList from '../components/ReportList';
 import ExportButton from '../components/ExportButton';
 import ReportForm from '../components/ReportForm';
 import { getDeadlineStatus, hasDifficulty, DEFAULT_TOTAL_CASE_TARGET } from '../reportMetrics';
+import { Download } from 'lucide-react';
 
 export default function DashboardPage() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -139,9 +140,19 @@ export default function DashboardPage() {
               <span className="section-title">
                 {spotlightLabel[spotlight]} ({spotlightReports.length})
               </span>
-              <button className="btn-search-toggle active" onClick={() => setSpotlight(null)}>
-                <X size={13} /> Đóng
-              </button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {spotlightReports.length > 0 && (
+                  <button
+                    className="btn-export"
+                    onClick={() => api.exportByIds(spotlightReports.map(r => r.id), `${spotlightLabel[spotlight]}.xlsx`)}
+                  >
+                    <Download size={14} /> Xuất Excel
+                  </button>
+                )}
+                <button className="btn-search-toggle active" onClick={() => setSpotlight(null)}>
+                  <X size={13} /> Đóng
+                </button>
+              </div>
             </div>
             {spotlightReports.length === 0
               ? <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Không có hồ sơ nào.</p>

@@ -24,6 +24,14 @@ export const api = {
     window.location.href = `/api/reports/export${qs ? `?${qs}` : ''}`;
   },
 
+  exportByIds: (ids: string[], filename?: string) => {
+    const qs = `ids=${ids.join(',')}`;
+    const link = document.createElement('a');
+    link.href = `/api/reports/export?${qs}`;
+    if (filename) link.download = filename;
+    link.click();
+  },
+
   // ── Config ───────────────────────────────────────────────────────────────
   getConfig: () =>
     axios.get<AppConfig>('/api/config').then(r => r.data),

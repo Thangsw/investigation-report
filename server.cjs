@@ -142,11 +142,16 @@ app.get('/api/reports/export', (req, res) => {
     let reports = readReports();
 
     // Optional query-param filtering
-    const { dtvName, loaiHoSo, doi, toBanDia } = req.query;
-    if (dtvName)   reports = reports.filter(r => r.dtvName === dtvName);
-    if (loaiHoSo)  reports = reports.filter(r => r.loaiHoSo === loaiHoSo);
-    if (doi)       reports = reports.filter(r => r.doi === doi);
-    if (toBanDia)  reports = reports.filter(r => r.toBanDia === toBanDia);
+    const { dtvName, loaiHoSo, doi, toBanDia, ids } = req.query;
+    if (ids) {
+      const idSet = new Set(String(ids).split(','));
+      reports = reports.filter(r => idSet.has(r.id));
+    } else {
+      if (dtvName)   reports = reports.filter(r => r.dtvName === dtvName);
+      if (loaiHoSo)  reports = reports.filter(r => r.loaiHoSo === loaiHoSo);
+      if (doi)       reports = reports.filter(r => r.doi === doi);
+      if (toBanDia)  reports = reports.filter(r => r.toBanDia === toBanDia);
+    }
 
     const wsData = [
       [
