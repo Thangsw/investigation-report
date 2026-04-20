@@ -1,31 +1,40 @@
 import { Routes, Route, NavLink } from 'react-router-dom';
 import { Shield } from 'lucide-react';
+import LandingPage from './pages/LandingPage';
 import ReportPage from './pages/ReportPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 
-export default function App() {
+function AppShell() {
   return (
     <div className="app-root">
       <nav className="top-nav glass-panel">
-        <div className="brand-title">
+        <NavLink to="/" className="brand-title" style={{ textDecoration: 'none' }}>
           <Shield size={20} />
           Quản lý Hồ sơ TĐC
-        </div>
+        </NavLink>
         <div className="nav-links">
-          <NavLink to="/" end>Báo cáo tổng hợp</NavLink>
-          <NavLink to="/reports">Chỉnh sửa hồ sơ đã nhập</NavLink>
+          <NavLink to="/hs" end>Báo cáo tổng hợp</NavLink>
+          <NavLink to="/hs/reports">Chỉnh sửa hồ sơ đã nhập</NavLink>
         </div>
       </nav>
 
       <main className="page-content">
         <Routes>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/reports" element={<ReportPage />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/hs/*" element={<AppShell />} />
+    </Routes>
   );
 }
