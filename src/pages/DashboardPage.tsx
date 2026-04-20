@@ -12,7 +12,7 @@ import { getDeadlineStatus, hasDifficulty, DEFAULT_TOTAL_CASE_TARGET } from '../
 export default function DashboardPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [investigators, setInvestigators] = useState<Investigator[]>([]);
-  const [filters, setFilters] = useState<Filters>({ dtvName: '', loaiHoSo: '', doi: '', toBanDia: '' });
+  const [filters, setFilters] = useState<Filters>({ dtvName: '', loaiHoSo: '', doi: '', toBanDia: '', trichYeu: '' });
   const [sheetOpen, setSheetOpen] = useState(false);
   const [spotlight, setSpotlight] = useState<SpotlightType | null>(null);
   const [totalCaseTarget, setTotalCaseTarget] = useState(DEFAULT_TOTAL_CASE_TARGET);
@@ -63,6 +63,7 @@ export default function DashboardPage() {
       if (filters.loaiHoSo && report.loaiHoSo !== filters.loaiHoSo) return false;
       if (filters.doi && report.doi !== filters.doi) return false;
       if (filters.toBanDia && (report.toBanDia ?? 'Hoà Bình') !== filters.toBanDia) return false;
+      if (filters.trichYeu && !report.trichYeu.toLowerCase().includes(filters.trichYeu.toLowerCase())) return false;
       return true;
     });
   }, [reports, filters]);

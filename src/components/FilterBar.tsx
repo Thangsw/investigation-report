@@ -5,6 +5,7 @@ export interface Filters {
   loaiHoSo: string;
   doi: string;
   toBanDia: string;
+  trichYeu: string;
 }
 
 interface Props {
@@ -57,6 +58,14 @@ export default function FilterBar({ investigators, filters, onChange }: Props) {
         <option value="Hoà Bình">Hoà Bình</option>
         <option value="Lạc Thuỷ">Lạc Thuỷ</option>
       </select>
+
+      <input
+        type="text"
+        className="form-control"
+        placeholder="Tìm theo trích yếu..."
+        value={filters.trichYeu}
+        onChange={e => onChange('trichYeu', e.target.value)}
+      />
     </div>
   );
 }
