@@ -11,6 +11,7 @@ const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH |
 const reportsFile = path.join(DATA_DIR, 'reports.json');
 const investigatorsFile = path.join(DATA_DIR, 'investigators.json');
 const configFile = path.join(DATA_DIR, 'config.json');
+const pendingChangesFile = path.join(DATA_DIR, 'pending-changes.json');
 
 const DEFAULT_CONFIG = {
   totalCaseTarget: 610,
@@ -125,6 +126,15 @@ const readInvestigators = () => {
 
 const writeInvestigators = (data) => {
   fs.writeFileSync(investigatorsFile, JSON.stringify(data, null, 2));
+};
+
+const readPendingChanges = () => {
+  if (!fs.existsSync(pendingChangesFile)) return [];
+  try { return JSON.parse(fs.readFileSync(pendingChangesFile, 'utf8')); }
+  catch { return []; }
+};
+const writePendingChanges = (data) => {
+  fs.writeFileSync(pendingChangesFile, JSON.stringify(data, null, 2));
 };
 
 app.get('/api/reports/export', (req, res) => {
@@ -410,9 +420,9 @@ app.post('/api/config', (req, res) => {
   try {
     const current = readConfig();
     const updated = { ...current };
-    if (typeof req.body.totalCaseTarget === 'number' && req.body.totalCaseTarget > 0) updated.totalCaseTarget = Math.round(req.body.totalCaseTarget);
     if (typeof req.body.totalCaseTargetHB === 'number' && req.body.totalCaseTargetHB >= 0) updated.totalCaseTargetHB = Math.round(req.body.totalCaseTargetHB);
     if (typeof req.body.totalCaseTargetLT === 'number' && req.body.totalCaseTargetLT >= 0) updated.totalCaseTargetLT = Math.round(req.body.totalCaseTargetLT);
+    updated.totalCaseTarget = (updated.totalCaseTargetHB || 0) + (updated.totalCaseTargetLT || 0) || updated.totalCaseTarget;
     if (typeof req.body.akTarget === 'number' && req.body.akTarget >= 0) updated.akTarget = Math.round(req.body.akTarget);
     if (typeof req.body.adTarget === 'number' && req.body.adTarget >= 0) updated.adTarget = Math.round(req.body.adTarget);
     if (['', 'Hoà Bình', 'Lạc Thuỷ'].includes(req.body.statsToBanDia)) updated.statsToBanDia = req.body.statsToBanDia;
@@ -424,6 +434,88 @@ app.post('/api/config', (req, res) => {
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: 'Lỗi lưu cấu hình' });
+  }
+});
+
+// ── Pending Changes ───────────────────────────────────────────────────────────
+
+app.get('/api/pending-changes', (_req, res) => {
+  try {
+    const changes = readPendingChanges();
+    changes.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+    res.json(changes);
+  } catch (err) {
+    res.status(500).json({ error: 'Lỗi đọc danh sách yêu cầu' });
+  }
+});
+
+app.post('/api/pending-changes', (req, res) => {
+  try {
+    const { type, reportId, reportSnapshot, newData, requestedBy } = req.body;
+    if (!type || !reportId || !reportSnapshot || !requestedBy) {
+      return res.status(400).json({ error: 'Thiếu thông tin yêu cầu' });
+    }
+    const changes = readPendingChanges();
+    const entry = {
+      id: Date.now().toString(),
+      type,
+      reportId,
+      reportSnapshot,
+      newData: newData || null,
+      requestedBy,
+      requestedAt: new Date().toISOString(),
+      status: 'pending',
+    };
+    changes.push(entry);
+    writePendingChanges(changes);
+    res.status(201).json({ message: 'Yêu cầu đã được gửi', data: entry });
+  } catch (err) {
+    res.status(500).json({ error: 'Lỗi gửi yêu cầu' });
+  }
+});
+
+app.put('/api/pending-changes/:id/approve', (req, res) => {
+  try {
+    const changes = readPendingChanges();
+    const idx = changes.findIndex((c) => c.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Không tìm thấy yêu cầu' });
+
+    const entry = changes[idx];
+    if (entry.status !== 'pending') return res.status(400).json({ error: 'Yêu cầu đã được xử lý' });
+
+    const reports = readReports();
+    if (entry.type === 'delete') {
+      writeReports(reports.filter((r) => r.id !== entry.reportId));
+    } else if (entry.type === 'edit' && entry.newData) {
+      const rIdx = reports.findIndex((r) => r.id === entry.reportId);
+      if (rIdx !== -1) {
+        reports[rIdx] = normalizeReport({ ...reports[rIdx], ...entry.newData, updatedAt: new Date().toISOString() });
+        writeReports(reports);
+      }
+    }
+
+    changes[idx] = { ...entry, status: 'approved' };
+    writePendingChanges(changes);
+    res.json({ message: 'Đã phê duyệt', data: changes[idx] });
+  } catch (err) {
+    res.status(500).json({ error: 'Lỗi phê duyệt' });
+  }
+});
+
+app.put('/api/pending-changes/:id/reject', (req, res) => {
+  try {
+    const changes = readPendingChanges();
+    const idx = changes.findIndex((c) => c.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Không tìm thấy yêu cầu' });
+
+    const entry = changes[idx];
+    if (entry.status !== 'pending') return res.status(400).json({ error: 'Yêu cầu đã được xử lý' });
+
+    changes[idx] = { ...entry, status: 'rejected' };
+    writePendingChanges(changes);
+    res.json({ message: 'Đã từ chối', data: changes[idx] });
+  } catch (err) {
+    res.status(500).json({ error: 'Lỗi từ chối' });
   }
 });
 

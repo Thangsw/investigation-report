@@ -54,3 +54,14 @@ export interface AppConfig {
 }
 
 export type ReportFormData = Omit<Report, 'id' | 'createdAt' | 'updatedAt'>;
+
+export interface PendingChange {
+  id: string;
+  type: 'edit' | 'delete';
+  reportId: string;
+  reportSnapshot: Report;
+  newData?: Partial<ReportFormData>;
+  requestedBy: string;
+  requestedAt: string;
+  status: 'pending' | 'approved' | 'rejected';
+}

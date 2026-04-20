@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
-import type { AppConfig, RequiredFields } from '../types';
+import type { AppConfig, RequiredFields, PendingChange } from '../types';
 
 const DEFAULT_REQUIRED: RequiredFields = {
   soHoSo: true,
@@ -32,7 +32,6 @@ const REQUIRED_FIELD_LABELS: { key: keyof RequiredFields; label: string }[] = [
 
 export default function AdminPage() {
   const [config, setConfig] = useState<AppConfig | null>(null);
-  const [totalInput, setTotalInput] = useState('');
   const [hbInput, setHbInput] = useState('');
   const [ltInput, setLtInput] = useState('');
   const [akInput, setAkInput] = useState('');
@@ -42,11 +41,14 @@ export default function AdminPage() {
   const [reqFields, setReqFields] = useState<RequiredFields>(DEFAULT_REQUIRED);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const fetchPending = () => api.getPendingChanges().then(setPendingChanges).catch(() => {});
 
   useEffect(() => {
     api.getConfig().then((cfg) => {
       setConfig(cfg);
-      setTotalInput(String(cfg.totalCaseTarget));
       setHbInput(String(cfg.totalCaseTargetHB ?? 0));
       setLtInput(String(cfg.totalCaseTargetLT ?? 0));
       setAkInput(String(cfg.akTarget));
@@ -55,23 +57,21 @@ export default function AdminPage() {
       setSheetsViewUrl(cfg.sheetsViewUrl ?? '');
       setReqFields({ ...DEFAULT_REQUIRED, ...cfg.requiredFields });
     });
+    fetchPending();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const total = parseInt(totalInput, 10);
     const hb = parseInt(hbInput, 10) || 0;
     const lt = parseInt(ltInput, 10) || 0;
     const ak = parseInt(akInput, 10);
     const ad = parseInt(adInput, 10);
-    if (!total || total <= 0) { setMessage('Tổng số phải là số nguyên dương'); return; }
     if (isNaN(ak) || ak < 0) { setMessage('Số AK phải >= 0'); return; }
     if (isNaN(ad) || ad < 0) { setMessage('Số AD phải >= 0'); return; }
     setSaving(true);
     setMessage('');
     try {
       const res = await api.updateConfig({
-        totalCaseTarget: total,
         totalCaseTargetHB: hb,
         totalCaseTargetLT: lt,
         akTarget: ak,
@@ -89,6 +89,26 @@ export default function AdminPage() {
     }
   };
 
+  const handleApprove = async (id: string) => {
+    setProcessingId(id);
+    try {
+      await api.approvePendingChange(id);
+      await fetchPending();
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    setProcessingId(id);
+    try {
+      await api.rejectPendingChange(id);
+      await fetchPending();
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const toggleField = (key: keyof RequiredFields) => {
     setReqFields((prev) => ({ ...prev, [key]: !prev[key] }));
   };
@@ -101,15 +121,10 @@ export default function AdminPage() {
         <div className="glass-panel" style={{ padding: 24, marginBottom: 16 }}>
           <h2 style={{ marginBottom: 8, fontSize: '1.05rem' }}>Mục tiêu thực hiện</h2>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 16 }}>
-            Hiện tại: Tổng {config?.totalCaseTarget ?? '…'} | HB {config?.totalCaseTargetHB ?? 0} | LT {config?.totalCaseTargetLT ?? 0} | AK {config?.akTarget ?? '…'} | AD {config?.adTarget ?? '…'}
+            Hiện tại: HB {config?.totalCaseTargetHB ?? 0} | LT {config?.totalCaseTargetLT ?? 0} | Tổng {config?.totalCaseTarget ?? '…'} | AK {config?.akTarget ?? '…'} | AD {config?.adTarget ?? '…'}
           </p>
 
           <div className="form-row">
-            <div className="form-group">
-              <label>Tổng số vụ việc (Tất cả)</label>
-              <input type="number" className="form-control" min={1} value={totalInput}
-                onChange={(e) => setTotalInput(e.target.value)} />
-            </div>
             <div className="form-group">
               <label>Tổ Hoà Bình</label>
               <input type="number" className="form-control" min={0} value={hbInput}
@@ -119,6 +134,11 @@ export default function AdminPage() {
               <label>Tổ Lạc Thuỷ</label>
               <input type="number" className="form-control" min={0} value={ltInput}
                 onChange={(e) => setLtInput(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label style={{ color: 'var(--text-muted)' }}>Tổng (tự tính)</label>
+              <input type="number" className="form-control" value={(parseInt(hbInput) || 0) + (parseInt(ltInput) || 0)} readOnly
+                style={{ opacity: 0.6 }} />
             </div>
           </div>
           <div className="form-row" style={{ marginTop: 8 }}>
@@ -230,6 +250,77 @@ export default function AdminPage() {
           {saving ? 'Đang lưu...' : 'Lưu cấu hình'}
         </button>
       </form>
+
+      {/* ── Pending Changes ── */}
+      <div className="glass-panel" style={{ padding: 24, marginTop: 24 }}>
+        <h2 style={{ marginBottom: 6, fontSize: '1.05rem' }}>
+          Yêu cầu chờ duyệt
+          {pendingChanges.filter(c => c.status === 'pending').length > 0 && (
+            <span style={{ marginLeft: 8, background: '#ff4757', color: '#fff', borderRadius: 12, padding: '1px 8px', fontSize: '0.75rem', fontWeight: 700 }}>
+              {pendingChanges.filter(c => c.status === 'pending').length}
+            </span>
+          )}
+        </h2>
+        <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+          ĐTV đã gửi yêu cầu sửa/xoá hồ sơ, Admin cần phê duyệt để áp dụng chính thức.
+        </p>
+        {pendingChanges.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Không có yêu cầu nào.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {pendingChanges.map((change) => {
+              const r = change.reportSnapshot;
+              const isPending = change.status === 'pending';
+              return (
+                <div key={change.id} style={{
+                  border: `1px solid ${isPending ? '#ff4757' : change.status === 'approved' ? '#2ed573' : '#888'}`,
+                  borderRadius: 8, padding: '12px 14px',
+                  opacity: isPending ? 1 : 0.6,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{
+                        fontSize: '0.72rem', fontWeight: 700, padding: '2px 7px', borderRadius: 4,
+                        background: change.type === 'delete' ? '#ff4757' : '#ff9f43', color: '#fff', marginRight: 8,
+                      }}>
+                        {change.type === 'delete' ? 'XOÁ' : 'SỬA'}
+                      </span>
+                      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{r.dtvName}</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginLeft: 8 }}>
+                        {r.loaiHoSo} · {r.soHoSo || '—'} · {r.trichYeu ? r.trichYeu.slice(0, 40) + (r.trichYeu.length > 40 ? '…' : '') : ''}
+                      </span>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                        {new Date(change.requestedAt).toLocaleString('vi-VN')} · {
+                          change.status === 'pending' ? 'Chờ duyệt' :
+                          change.status === 'approved' ? '✓ Đã duyệt' : '✗ Đã từ chối'
+                        }
+                      </div>
+                    </div>
+                    {isPending && (
+                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                        <button
+                          onClick={() => handleApprove(change.id)}
+                          disabled={processingId === change.id}
+                          style={{ padding: '5px 14px', background: '#2ed573', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
+                        >
+                          Duyệt
+                        </button>
+                        <button
+                          onClick={() => handleReject(change.id)}
+                          disabled={processingId === change.id}
+                          style={{ padding: '5px 14px', background: 'transparent', color: '#ff4757', border: '1px solid #ff4757', borderRadius: 6, fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
+                        >
+                          Từ chối
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

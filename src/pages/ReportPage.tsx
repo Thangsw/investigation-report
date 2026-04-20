@@ -9,6 +9,7 @@ import InvestigatorManager from '../components/InvestigatorManager';
 import ExportButton from '../components/ExportButton';
 
 type SheetType = 'form' | 'dtv' | null;
+type Toast = { msg: string; ok: boolean };
 
 const EMPTY_FILTERS: Filters = { dtvName: '', loaiHoSo: '', doi: '', toBanDia: '', trichYeu: '' };
 
@@ -21,6 +22,7 @@ export default function ReportPage() {
   const [myName, setMyName] = useState('');
   const [searchMode, setSearchMode] = useState(false);
   const [searchFilters, setSearchFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [toast, setToast] = useState<Toast | null>(null);
 
   const fetchAll = useCallback(async () => {
     const [reportData, investigatorData, configData] = await Promise.all([
@@ -72,19 +74,39 @@ export default function ReportPage() {
     setEditingReport(null);
   };
 
+  const showToast = (msg: string, ok = true) => {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   const handleSubmit = async (data: ReportFormData) => {
     if (editingReport) {
-      await api.updateReport(editingReport.id, data);
+      await api.createPendingChange({
+        type: 'edit',
+        reportId: editingReport.id,
+        reportSnapshot: editingReport,
+        newData: data,
+        requestedBy: data.dtvName || editingReport.dtvName,
+      });
+      closeSheet();
+      showToast('Yêu cầu chỉnh sửa đã gửi, chờ Admin duyệt');
     } else {
       await api.createReport(data);
+      closeSheet();
+      await fetchAll();
     }
-    closeSheet();
-    await fetchAll();
   };
 
   const handleDelete = async (id: string) => {
-    await api.deleteReport(id);
-    await fetchAll();
+    const report = reports.find((r) => r.id === id);
+    if (!report) return;
+    await api.createPendingChange({
+      type: 'delete',
+      reportId: id,
+      reportSnapshot: report,
+      requestedBy: report.dtvName,
+    });
+    showToast('Yêu cầu xoá đã gửi, chờ Admin duyệt');
   };
 
   const handleAddDTV = async (name: string) => {
@@ -106,6 +128,16 @@ export default function ReportPage() {
 
   return (
     <div style={{ position: 'relative' }}>
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+          background: toast.ok ? '#2ed573' : '#ff4757', color: '#fff',
+          padding: '10px 20px', borderRadius: 8, fontWeight: 600, fontSize: '0.9rem',
+          zIndex: 9999, boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+        }}>
+          {toast.msg}
+        </div>
+      )}
       {/* ── Header ── */}
       <div className="section-header" style={{ marginBottom: 12 }}>
         <span className="section-title">

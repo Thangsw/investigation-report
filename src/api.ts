@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Report, Investigator, ReportFormData, AppConfig } from './types';
+import type { Report, Investigator, ReportFormData, AppConfig, PendingChange } from './types';
 
 export const api = {
   // ── Reports ──────────────────────────────────────────────────────────────
@@ -43,4 +43,17 @@ export const api = {
 
   deleteInvestigator: (id: string) =>
     axios.delete(`/api/investigators/${id}`),
+
+  // ── Pending Changes ───────────────────────────────────────────────────────
+  getPendingChanges: () =>
+    axios.get<PendingChange[]>('/api/pending-changes').then(r => r.data),
+
+  createPendingChange: (data: { type: 'edit' | 'delete'; reportId: string; reportSnapshot: Report; newData?: Partial<ReportFormData>; requestedBy: string }) =>
+    axios.post<{ data: PendingChange }>('/api/pending-changes', data).then(r => r.data.data),
+
+  approvePendingChange: (id: string) =>
+    axios.put<{ data: PendingChange }>(`/api/pending-changes/${id}/approve`).then(r => r.data.data),
+
+  rejectPendingChange: (id: string) =>
+    axios.put<{ data: PendingChange }>(`/api/pending-changes/${id}/reject`).then(r => r.data.data),
 };
