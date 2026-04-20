@@ -1,6 +1,39 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
-import type { AppConfig, RequiredFields, PendingChange } from '../types';
+import type { AppConfig, RequiredFields, PendingChange, Report, ReportFormData } from '../types';
+
+const DIFF_LABELS: Partial<Record<keyof Report, string>> = {
+  dtvName: 'Họ tên ĐTV',
+  nguoiCamHoSo: 'Người cầm hồ sơ',
+  loaiHoSo: 'Loại hồ sơ',
+  soTap: 'Số tập',
+  soHoSo: 'Số hồ sơ',
+  soLuu: 'Số lưu',
+  trichYeu: 'Trích yếu',
+  doi: 'Lĩnh vực',
+  toBanDia: 'Tổ địa bàn',
+  tinhTrang: 'Tình trạng',
+  ketQuaGiaiQuyet: 'Kết quả giải quyết',
+  ngayHetThoiHieuTruyCuuTNHS: 'Ngày hết thời hiệu TNHS',
+  tinhChatMucDoNghiemTrong: 'Tính chất, mức độ',
+  khoKhan: 'Khó khăn/Vướng mắc',
+  daThucHien: 'Đã thực hiện',
+  hoSoHienHanh: 'Hồ sơ hiện hành',
+  qdPhanCongPTT: 'QĐ phân công PTT',
+  qdPhanCongLaiDTV: 'QĐ phân công lại ĐTV',
+  qdKhoiTo: 'QĐ khởi tố',
+};
+
+function computeDiff(snapshot: Report, newData: Partial<ReportFormData>) {
+  return (Object.keys(newData) as (keyof ReportFormData)[])
+    .filter((k) => k in DIFF_LABELS)
+    .map((k) => ({
+      label: DIFF_LABELS[k as keyof Report]!,
+      from: String(snapshot[k as keyof Report] ?? ''),
+      to: String(newData[k] ?? ''),
+    }))
+    .filter((d) => d.from !== d.to);
+}
 
 const DEFAULT_REQUIRED: RequiredFields = {
   soHoSo: true,
@@ -279,17 +312,56 @@ export default function AdminPage() {
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{
-                        fontSize: '0.72rem', fontWeight: 700, padding: '2px 7px', borderRadius: 4,
-                        background: change.type === 'delete' ? '#ff4757' : '#ff9f43', color: '#fff', marginRight: 8,
-                      }}>
-                        {change.type === 'delete' ? 'XOÁ' : 'SỬA'}
-                      </span>
-                      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{r.dtvName}</span>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginLeft: 8 }}>
-                        {r.loaiHoSo} · {r.soHoSo || '—'} · {r.trichYeu ? r.trichYeu.slice(0, 40) + (r.trichYeu.length > 40 ? '…' : '') : ''}
-                      </span>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
+                        <span style={{
+                          fontSize: '0.72rem', fontWeight: 700, padding: '2px 7px', borderRadius: 4,
+                          background: change.type === 'delete' ? '#ff4757' : '#ff9f43', color: '#fff',
+                        }}>
+                          {change.type === 'delete' ? 'XOÁ' : 'SỬA'}
+                        </span>
+                        <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>{r.dtvName}</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                          {r.loaiHoSo} · {r.soHoSo || '—'}
+                        </span>
+                      </div>
+
+                      {r.trichYeu && (
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
+                          {r.trichYeu.slice(0, 80)}{r.trichYeu.length > 80 ? '…' : ''}
+                        </div>
+                      )}
+
+                      {/* Diff for edit requests */}
+                      {change.type === 'edit' && change.newData && (() => {
+                        const diffs = computeDiff(r, change.newData);
+                        if (diffs.length === 0) return <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 6 }}>Không có thay đổi nội dung.</div>;
+                        return (
+                          <div style={{
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: 6, padding: '8px 10px',
+                            marginBottom: 6,
+                          }}>
+                            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#ff9f43', marginBottom: 5, letterSpacing: '0.03em' }}>
+                              NỘI DUNG MUỐN THAY ĐỔI
+                            </div>
+                            {diffs.map((d) => (
+                              <div key={d.label} style={{ fontSize: '0.78rem', marginBottom: 4, lineHeight: 1.5 }}>
+                                <span style={{ color: 'var(--text-muted)', minWidth: 120, display: 'inline-block' }}>{d.label}:</span>
+                                <span style={{ color: '#ff6b81', textDecoration: 'line-through', marginRight: 6 }}>
+                                  {d.from || '(trống)'}
+                                </span>
+                                <span style={{ color: 'var(--text-muted)', marginRight: 6 }}>→</span>
+                                <span style={{ color: '#2ed573', fontWeight: 600 }}>
+                                  {d.to || '(trống)'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         {new Date(change.requestedAt).toLocaleString('vi-VN')} · {
                           change.status === 'pending' ? 'Chờ duyệt' :
                           change.status === 'approved' ? '✓ Đã duyệt' : '✗ Đã từ chối'
@@ -297,18 +369,18 @@ export default function AdminPage() {
                       </div>
                     </div>
                     {isPending && (
-                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
                         <button
                           onClick={() => handleApprove(change.id)}
                           disabled={processingId === change.id}
-                          style={{ padding: '5px 14px', background: '#2ed573', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
+                          style={{ padding: '6px 16px', background: '#2ed573', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
                         >
                           Duyệt
                         </button>
                         <button
                           onClick={() => handleReject(change.id)}
                           disabled={processingId === change.id}
-                          style={{ padding: '5px 14px', background: 'transparent', color: '#ff4757', border: '1px solid #ff4757', borderRadius: 6, fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
+                          style={{ padding: '6px 16px', background: 'transparent', color: '#ff4757', border: '1px solid #ff4757', borderRadius: 6, fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}
                         >
                           Từ chối
                         </button>

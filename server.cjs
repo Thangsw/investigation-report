@@ -460,7 +460,9 @@ app.post('/api/pending-changes', (req, res) => {
     if (!type || !reportId || !reportSnapshot || !requestedBy) {
       return res.status(400).json({ error: 'Thiếu thông tin yêu cầu' });
     }
-    const changes = readPendingChanges();
+    // Replace any existing pending change for the same report (keep only latest request)
+    let changes = readPendingChanges();
+    changes = changes.filter((c) => !(c.reportId === reportId && c.status === 'pending'));
     const entry = {
       id: Date.now().toString(),
       type,
