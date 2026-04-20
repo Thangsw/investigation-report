@@ -9,13 +9,14 @@ interface Props {
   totalCaseTarget: number;
   akTarget: number;
   adTarget: number;
-  statsToBanDia?: string;
+  viewToBanDia?: '' | 'Hoà Bình' | 'Lạc Thuỷ';
+  onChangeViewToBanDia?: (val: '' | 'Hoà Bình' | 'Lạc Thuỷ') => void;
   spotlight?: SpotlightType | null;
   onCardClick?: (type: SpotlightType) => void;
   spotlightPanel?: ReactNode;
 }
 
-export default function StatsCards({ reports, totalCaseTarget, akTarget, adTarget, statsToBanDia, spotlight, onCardClick, spotlightPanel }: Props) {
+export default function StatsCards({ reports, totalCaseTarget, akTarget, adTarget, viewToBanDia = '', onChangeViewToBanDia, spotlight, onCardClick, spotlightPanel }: Props) {
   const metrics = getDashboardMetrics(reports, totalCaseTarget);
   const dtvEntries = Object.entries(metrics.byDTV).sort((a, b) => b[1] - a[1]);
   const maxDTV = dtvEntries[0]?.[1] || 1;
@@ -26,13 +27,17 @@ export default function StatsCards({ reports, totalCaseTarget, akTarget, adTarge
   return (
     <>
       <div className="section-card glass-panel">
-        <div className="section-title" style={{ marginBottom: 12 }}>
-          Tổng số vụ án, vụ việc tạm đình chỉ đến 22/03/2026
-          {statsToBanDia && (
-            <span style={{ marginLeft: 8, fontSize: '0.8rem', fontWeight: 400, color: '#ff4757' }}>
-              — Tổ {statsToBanDia}
-            </span>
-          )}
+        <div className="section-title" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <span>Tổng số vụ án, vụ việc tạm đình chỉ đến 22/03/2026</span>
+          <select
+            value={viewToBanDia}
+            onChange={e => onChangeViewToBanDia?.(e.target.value as '' | 'Hoà Bình' | 'Lạc Thuỷ')}
+            style={{ fontSize: '0.8rem', fontWeight: 600, color: '#ff4757', border: '1px solid #ff4757', borderRadius: 4, padding: '2px 8px', background: 'transparent', cursor: 'pointer' }}
+          >
+            <option value="">Tất cả</option>
+            <option value="Hoà Bình">Tổ Hoà Bình</option>
+            <option value="Lạc Thuỷ">Tổ Lạc Thuỷ</option>
+          </select>
         </div>
         <div className="stats-grid stats-grid-4" style={{ marginBottom: 12 }}>
           <div className="stat-card">

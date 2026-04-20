@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [spotlight, setSpotlight] = useState<SpotlightType | null>(null);
   const [totalCaseTarget, setTotalCaseTarget] = useState(DEFAULT_TOTAL_CASE_TARGET);
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+  const [viewToBanDia, setViewToBanDia] = useState<'' | 'Hoà Bình' | 'Lạc Thuỷ'>();
 
   const fetchAll = useCallback(async () => {
     const [reportData, investigatorData, configData] = await Promise.all([
@@ -27,7 +28,10 @@ export default function DashboardPage() {
     setReports(reportData);
     setInvestigators(investigatorData);
     setTotalCaseTarget(configData.totalCaseTarget);
-    setAppConfig(configData);
+    setAppConfig((prev) => {
+      if (prev === undefined || prev === null) setViewToBanDia(configData.statsToBanDia ?? '');
+      return configData;
+    });
   }, []);
 
   useEffect(() => {
@@ -50,12 +54,21 @@ export default function DashboardPage() {
     await fetchAll();
   };
 
-  const statsToBanDia = appConfig?.statsToBanDia ?? '';
+  const activeView = viewToBanDia ?? '';
+
+  const displayTotalTarget = useMemo(() => {
+    if (!appConfig) return totalCaseTarget;
+    const hb = appConfig.totalCaseTargetHB ?? 0;
+    const lt = appConfig.totalCaseTargetLT ?? 0;
+    if (activeView === 'Hoà Bình') return hb || totalCaseTarget;
+    if (activeView === 'Lạc Thuỷ') return lt || totalCaseTarget;
+    return (hb + lt) || totalCaseTarget;
+  }, [activeView, appConfig, totalCaseTarget]);
 
   const statsReports = useMemo(() => {
-    if (!statsToBanDia) return reports;
-    return reports.filter((r) => (r.toBanDia ?? 'Hoà Bình') === statsToBanDia);
-  }, [reports, statsToBanDia]);
+    if (!activeView) return reports;
+    return reports.filter((r) => (r.toBanDia ?? 'Hoà Bình') === activeView);
+  }, [reports, activeView]);
 
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
@@ -70,12 +83,12 @@ export default function DashboardPage() {
 
   const spotlightReports = useMemo(() => {
     if (!spotlight) return [];
-    const base = statsToBanDia ? reports.filter((r) => (r.toBanDia ?? 'Hoà Bình') === statsToBanDia) : reports;
+    const base = activeView ? reports.filter((r) => (r.toBanDia ?? 'Hoà Bình') === activeView) : reports;
     if (spotlight === 'upcoming') return base.filter((r) => !r.daThucHien && getDeadlineStatus(r.ngayHetThoiHieuTruyCuuTNHS) === 'upcoming');
     if (spotlight === 'overdue')  return base.filter((r) => !r.daThucHien && getDeadlineStatus(r.ngayHetThoiHieuTruyCuuTNHS) === 'overdue');
     if (spotlight === 'difficulty') return base.filter(hasDifficulty);
     return [];
-  }, [reports, spotlight, statsToBanDia]);
+  }, [reports, spotlight, activeView]);
 
   const spotlightLabel: Record<SpotlightType, string> = {
     upcoming:   'Sắp hết thời hiệu TNHS',
@@ -113,10 +126,11 @@ export default function DashboardPage() {
 
       <StatsCards
         reports={statsReports}
-        totalCaseTarget={totalCaseTarget}
+        totalCaseTarget={displayTotalTarget}
         akTarget={appConfig?.akTarget ?? 372}
         adTarget={appConfig?.adTarget ?? 238}
-        statsToBanDia={statsToBanDia}
+        viewToBanDia={activeView}
+        onChangeViewToBanDia={setViewToBanDia}
         spotlight={spotlight}
         onCardClick={handleCardClick}
         spotlightPanel={spotlight ? (

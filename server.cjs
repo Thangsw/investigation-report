@@ -14,6 +14,8 @@ const configFile = path.join(DATA_DIR, 'config.json');
 
 const DEFAULT_CONFIG = {
   totalCaseTarget: 610,
+  totalCaseTargetHB: 0,
+  totalCaseTargetLT: 0,
   akTarget: 372,
   adTarget: 238,
   statsToBanDia: '',
@@ -409,6 +411,8 @@ app.post('/api/config', (req, res) => {
     const current = readConfig();
     const updated = { ...current };
     if (typeof req.body.totalCaseTarget === 'number' && req.body.totalCaseTarget > 0) updated.totalCaseTarget = Math.round(req.body.totalCaseTarget);
+    if (typeof req.body.totalCaseTargetHB === 'number' && req.body.totalCaseTargetHB >= 0) updated.totalCaseTargetHB = Math.round(req.body.totalCaseTargetHB);
+    if (typeof req.body.totalCaseTargetLT === 'number' && req.body.totalCaseTargetLT >= 0) updated.totalCaseTargetLT = Math.round(req.body.totalCaseTargetLT);
     if (typeof req.body.akTarget === 'number' && req.body.akTarget >= 0) updated.akTarget = Math.round(req.body.akTarget);
     if (typeof req.body.adTarget === 'number' && req.body.adTarget >= 0) updated.adTarget = Math.round(req.body.adTarget);
     if (['', 'Hoà Bình', 'Lạc Thuỷ'].includes(req.body.statsToBanDia)) updated.statsToBanDia = req.body.statsToBanDia;

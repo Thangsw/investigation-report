@@ -44,6 +44,8 @@ export interface RequiredFields {
 
 export interface AppConfig {
   totalCaseTarget: number;
+  totalCaseTargetHB: number;
+  totalCaseTargetLT: number;
   akTarget: number;
   adTarget: number;
   statsToBanDia: '' | 'Hoà Bình' | 'Lạc Thuỷ';
