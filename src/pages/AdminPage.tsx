@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { BarChart2 } from 'lucide-react';
 import { api } from '../api';
 import type { AppConfig, RequiredFields, PendingChange, Report, ReportFormData } from '../types';
 
@@ -146,8 +148,30 @@ export default function AdminPage() {
     setReqFields((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const navigate = useNavigate();
+
   return (
     <div style={{ maxWidth: 560, margin: '40px auto', padding: '0 16px' }}>
+      {/* Thống kê button */}
+      <button
+        type="button"
+        onClick={() => navigate('/hs/statistics')}
+        style={{
+          width: '100%', marginBottom: 20,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          padding: '14px 24px', borderRadius: 12,
+          background: 'linear-gradient(135deg, rgba(84,160,255,0.18), rgba(84,160,255,0.06))',
+          border: '2px solid rgba(84,160,255,0.45)',
+          color: '#54a0ff', cursor: 'pointer', fontSize: '1rem', fontWeight: 700,
+          transition: 'all 0.15s',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#54a0ff'; (e.currentTarget as HTMLElement).style.background = 'rgba(84,160,255,0.22)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(84,160,255,0.45)'; (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, rgba(84,160,255,0.18), rgba(84,160,255,0.06))'; }}
+      >
+        <BarChart2 size={20} />
+        Thống kê chi tiết theo ĐTV
+      </button>
+
       <form onSubmit={handleSubmit}>
 
         {/* ── Mục tiêu thực hiện ── */}

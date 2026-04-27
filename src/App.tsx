@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import ReportPage from './pages/ReportPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
+import StatisticsPage from './pages/StatisticsPage';
 
 function AppShell() {
   return (
@@ -16,6 +17,7 @@ function AppShell() {
         <div className="nav-links">
           <NavLink to="/hs" end>Báo cáo tổng hợp</NavLink>
           <NavLink to="/hs/reports">Chỉnh sửa hồ sơ đã nhập</NavLink>
+          <NavLink to="/hs/statistics">Thống kê ĐTV</NavLink>
         </div>
       </nav>
 
@@ -24,6 +26,7 @@ function AppShell() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/reports" element={<ReportPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/statistics" element={<StatisticsPage />} />
         </Routes>
       </main>
     </div>
