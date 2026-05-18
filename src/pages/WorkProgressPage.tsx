@@ -36,6 +36,7 @@ const OPERATION_SECTIONS = [
 ];
 
 type SavedWorkItem = { report: WorkProgressReport; item: WorkProgressItem };
+type ActivePlacement = { sectionTitle: string; label: string; isCustom?: boolean };
 
 const newItem = (category: string, workContent = ''): WorkProgressItem => ({
   id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -59,6 +60,21 @@ const itemPosition = (item: WorkProgressItem): WorkPosition =>
 const getDisplayText = (item: WorkProgressItem) =>
   item.summary || item.caseNumber || item.progress || '(chưa có trích yếu)';
 
+const getPlacementForItem = (item: WorkProgressItem): ActivePlacement | null => {
+  if (item.category === STAFF_CATEGORY) {
+    return { sectionTitle: STAFF_CATEGORY, label: STAFF_CATEGORY };
+  }
+
+  const section = OPERATION_SECTIONS.find((entry) => entry.title === item.category);
+  if (!section) return null;
+  const isKnownItem = section.items.includes(item.workContent);
+  return {
+    sectionTitle: section.title,
+    label: isKnownItem ? item.workContent : 'Nội dung khác',
+    isCustom: !isKnownItem,
+  };
+};
+
 function formatDate(value: string) {
   if (!value) return '';
   const [year, month, day] = value.split('-');
@@ -73,6 +89,7 @@ export default function WorkProgressPage() {
   const [team, setTeam] = useState('');
   const [positions, setPositions] = useState<WorkPosition[]>([]);
   const [activeItem, setActiveItem] = useState<WorkProgressItem | null>(null);
+  const [activePlacement, setActivePlacement] = useState<ActivePlacement | null>(null);
   const [editingReport, setEditingReport] = useState<WorkProgressReport | null>(null);
   const [activeTab, setActiveTab] = useState<'form' | 'stats'>('form');
   const [saving, setSaving] = useState(false);
@@ -163,11 +180,13 @@ export default function WorkProgressPage() {
 
   const clearActiveItem = () => {
     setActiveItem(null);
+    setActivePlacement(null);
     setEditingReport(null);
   };
 
-  const startNewItem = (item: WorkProgressItem) => {
+  const startNewItem = (item: WorkProgressItem, placement?: ActivePlacement) => {
     setActiveItem(item);
+    setActivePlacement(placement ?? getPlacementForItem(item));
     setEditingReport(null);
   };
 
@@ -179,6 +198,7 @@ export default function WorkProgressPage() {
       return Array.from(next);
     });
     setActiveItem({ ...saved.item });
+    setActivePlacement(getPlacementForItem(saved.item));
     setEditingReport(saved.report);
     setActiveTab('form');
   };
@@ -331,9 +351,24 @@ export default function WorkProgressPage() {
               <div className="section-header">
                 <span className="section-title">Tham mưu tổng hợp</span>
               </div>
-              <button className="btn-add" type="button" onClick={() => startNewItem(newItem(STAFF_CATEGORY))}>
+              <button
+                className="btn-add"
+                type="button"
+                onClick={() => startNewItem(newItem(STAFF_CATEGORY), { sectionTitle: STAFF_CATEGORY, label: STAFF_CATEGORY })}
+              >
                 <Plus size={14} /> Thêm đầu việc
               </button>
+              {activeItem && activePlacement?.sectionTitle === STAFF_CATEGORY && (
+                <InlineWorkForm
+                  item={activeItem}
+                  editing={Boolean(editingReport)}
+                  saving={saving}
+                  canSubmit={canSubmit}
+                  onChange={updateActiveItem}
+                  onSubmit={submit}
+                  onCancel={clearActiveItem}
+                />
+              )}
             </div>
           )}
 
@@ -352,87 +387,18 @@ export default function WorkProgressPage() {
                     key={section.title}
                     section={section}
                     savedItems={flatOfficerItems}
+                    activeItem={activeItem}
+                    activePlacement={activePlacement}
+                    editing={Boolean(editingReport)}
+                    saving={saving}
+                    canSubmit={canSubmit}
+                    onChange={updateActiveItem}
+                    onSubmit={submit}
+                    onCancel={clearActiveItem}
                     onNew={startNewItem}
                     onEdit={startEditItem}
                   />
                 ))}
-              </div>
-            </div>
-          )}
-
-          {activeItem && (
-            <div className="section-card glass-panel">
-              <div className="section-header">
-                <span className="section-title">{editingReport ? 'Đang sửa đầu việc' : 'Đang nhập đầu việc'}</span>
-                <span className="badge badge-current">{activeItem.category}</span>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Nội dung công tác</label>
-                  <input
-                    className="form-control"
-                    value={activeItem.workContent}
-                    onChange={(e) => updateActiveItem('workContent', e.target.value)}
-                    placeholder="Nhập nội dung công tác..."
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Số hồ sơ</label>
-                  <input className="form-control" value={activeItem.caseNumber} onChange={(e) => updateActiveItem('caseNumber', e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Thời hạn</label>
-                  <input className="form-control" type="date" value={activeItem.deadline} onChange={(e) => updateActiveItem('deadline', e.target.value)} />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Trích yếu cụ thể</label>
-                  <input className="form-control" value={activeItem.summary} onChange={(e) => updateActiveItem('summary', e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Tiến độ thực hiện</label>
-                  <input className="form-control" value={activeItem.progress} onChange={(e) => updateActiveItem('progress', e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Trạng thái</label>
-                  {PRIMARY_CASE_CATEGORIES.has(activeItem.category) && (
-                    <label className="checkbox-row">
-                      <input
-                        type="checkbox"
-                        checked={activeItem.primaryCase}
-                        onChange={(e) => updateActiveItem('primaryCase', e.target.checked)}
-                      />
-                      Thụ lý chính
-                    </label>
-                  )}
-                  <label className="checkbox-row">
-                    <input
-                      type="checkbox"
-                      checked={activeItem.completed}
-                      onChange={(e) => updateActiveItem('completed', e.target.checked)}
-                    />
-                    Đã hoàn thành
-                  </label>
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Khó khăn vướng mắc</label>
-                  <input className="form-control" value={activeItem.difficulties} onChange={(e) => updateActiveItem('difficulties', e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Đề xuất</label>
-                  <input className="form-control" value={activeItem.proposal} onChange={(e) => updateActiveItem('proposal', e.target.value)} />
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <button className="btn-submit" type="button" disabled={!canSubmit || saving} onClick={submit} style={{ flex: '1 1 220px' }}>
-                  <Save size={17} /> {saving ? 'Đang lưu...' : editingReport ? 'Lưu chỉnh sửa' : 'Lưu đầu việc'}
-                </button>
-                <button className="btn-small" type="button" onClick={clearActiveItem} style={{ minHeight: 46 }}>
-                  Huỷ
-                </button>
               </div>
             </div>
           )}
@@ -451,12 +417,28 @@ export default function WorkProgressPage() {
 function WorkSection({
   section,
   savedItems,
+  activeItem,
+  activePlacement,
+  editing,
+  saving,
+  canSubmit,
+  onChange,
+  onSubmit,
+  onCancel,
   onNew,
   onEdit,
 }: {
   section: { title: string; items: string[] };
   savedItems: SavedWorkItem[];
-  onNew: (item: WorkProgressItem) => void;
+  activeItem: WorkProgressItem | null;
+  activePlacement: ActivePlacement | null;
+  editing: boolean;
+  saving: boolean;
+  canSubmit: boolean;
+  onChange: (key: keyof WorkProgressItem, value: string | boolean) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  onNew: (item: WorkProgressItem, placement?: ActivePlacement) => void;
   onEdit: (saved: SavedWorkItem) => void;
 }) {
   const sectionItems = savedItems.filter(({ item }) => item.category === section.title);
@@ -472,6 +454,14 @@ function WorkSection({
             label={label}
             sectionTitle={section.title}
             savedItems={sectionItems.filter(({ item }) => item.workContent === label)}
+            activeItem={activeItem}
+            activePlacement={activePlacement}
+            editing={editing}
+            saving={saving}
+            canSubmit={canSubmit}
+            onChange={onChange}
+            onSubmit={onSubmit}
+            onCancel={onCancel}
             onNew={onNew}
             onEdit={onEdit}
           />
@@ -480,6 +470,14 @@ function WorkSection({
           label="Nội dung khác"
           sectionTitle={section.title}
           savedItems={customItems}
+          activeItem={activeItem}
+          activePlacement={activePlacement}
+          editing={editing}
+          saving={saving}
+          canSubmit={canSubmit}
+          onChange={onChange}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
           onNew={onNew}
           onEdit={onEdit}
           isCustom
@@ -493,6 +491,14 @@ function WorkOption({
   label,
   sectionTitle,
   savedItems,
+  activeItem,
+  activePlacement,
+  editing,
+  saving,
+  canSubmit,
+  onChange,
+  onSubmit,
+  onCancel,
   onNew,
   onEdit,
   isCustom = false,
@@ -500,10 +506,25 @@ function WorkOption({
   label: string;
   sectionTitle: string;
   savedItems: SavedWorkItem[];
-  onNew: (item: WorkProgressItem) => void;
+  activeItem: WorkProgressItem | null;
+  activePlacement: ActivePlacement | null;
+  editing: boolean;
+  saving: boolean;
+  canSubmit: boolean;
+  onChange: (key: keyof WorkProgressItem, value: string | boolean) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  onNew: (item: WorkProgressItem, placement?: ActivePlacement) => void;
   onEdit: (saved: SavedWorkItem) => void;
   isCustom?: boolean;
 }) {
+  const placement = { sectionTitle, label, isCustom };
+  const isActive =
+    Boolean(activeItem) &&
+    activePlacement?.sectionTitle === sectionTitle &&
+    activePlacement.label === label &&
+    Boolean(activePlacement.isCustom) === isCustom;
+
   return (
     <div className="work-option">
       <div className="work-option-head">
@@ -511,11 +532,23 @@ function WorkOption({
         <button
           className={isCustom ? 'btn-add' : 'btn-small'}
           type="button"
-          onClick={() => onNew(newItem(sectionTitle, isCustom ? '' : label))}
+          onClick={() => onNew(newItem(sectionTitle, isCustom ? '' : label), placement)}
         >
           <Plus size={13} /> Thêm mới
         </button>
       </div>
+      {isActive && activeItem && (
+        <InlineWorkForm
+          item={activeItem}
+          editing={editing}
+          saving={saving}
+          canSubmit={canSubmit}
+          compactWorkContent={!isCustom}
+          onChange={onChange}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+        />
+      )}
       {savedItems.length > 0 && (
         <div className="work-summary-list">
           {savedItems.map((saved, index) => (
@@ -534,6 +567,110 @@ function WorkOption({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function InlineWorkForm({
+  item,
+  editing,
+  saving,
+  canSubmit,
+  compactWorkContent = false,
+  onChange,
+  onSubmit,
+  onCancel,
+}: {
+  item: WorkProgressItem;
+  editing: boolean;
+  saving: boolean;
+  canSubmit: boolean;
+  compactWorkContent?: boolean;
+  onChange: (key: keyof WorkProgressItem, value: string | boolean) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="inline-work-form">
+      <div className="section-header" style={{ marginBottom: 10 }}>
+        <span className="section-title">{editing ? 'Sửa đầu việc' : 'Nhập đầu việc'}</span>
+        <span className="badge badge-current">{item.category}</span>
+      </div>
+      <div className="form-row">
+        {!compactWorkContent && (
+          <div className="form-group">
+            <label>Nội dung công tác</label>
+            <input
+              className="form-control"
+              value={item.workContent}
+              onChange={(e) => onChange('workContent', e.target.value)}
+              placeholder="Nhập nội dung công tác..."
+            />
+          </div>
+        )}
+        <div className="form-group">
+          <label>Trích yếu cụ thể</label>
+          <input
+            className="form-control"
+            value={item.summary}
+            onChange={(e) => onChange('summary', e.target.value)}
+            placeholder="Nhập trích yếu..."
+          />
+        </div>
+        <div className="form-group">
+          <label>Số hồ sơ</label>
+          <input className="form-control" value={item.caseNumber} onChange={(e) => onChange('caseNumber', e.target.value)} />
+        </div>
+      </div>
+      <div className="form-row">
+        <div className="form-group">
+          <label>Tiến độ thực hiện</label>
+          <input className="form-control" value={item.progress} onChange={(e) => onChange('progress', e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label>Thời hạn</label>
+          <input className="form-control" type="date" value={item.deadline} onChange={(e) => onChange('deadline', e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label>Trạng thái</label>
+          {PRIMARY_CASE_CATEGORIES.has(item.category) && (
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={item.primaryCase}
+                onChange={(e) => onChange('primaryCase', e.target.checked)}
+              />
+              Thụ lý chính
+            </label>
+          )}
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={item.completed}
+              onChange={(e) => onChange('completed', e.target.checked)}
+            />
+            Đã hoàn thành
+          </label>
+        </div>
+      </div>
+      <div className="form-row">
+        <div className="form-group">
+          <label>Khó khăn vướng mắc</label>
+          <input className="form-control" value={item.difficulties} onChange={(e) => onChange('difficulties', e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label>Đề xuất</label>
+          <input className="form-control" value={item.proposal} onChange={(e) => onChange('proposal', e.target.value)} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <button className="btn-submit" type="button" disabled={!canSubmit || saving} onClick={onSubmit} style={{ flex: '1 1 220px' }}>
+          <Save size={17} /> {saving ? 'Đang lưu...' : editing ? 'Lưu chỉnh sửa' : 'Lưu đầu việc'}
+        </button>
+        <button className="btn-small" type="button" onClick={onCancel} style={{ minHeight: 46 }}>
+          Huỷ
+        </button>
+      </div>
     </div>
   );
 }
