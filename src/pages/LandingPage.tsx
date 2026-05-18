@@ -27,7 +27,7 @@ export default function LandingPage() {
           lineHeight: 1.3,
           margin: 0,
         }}>
-          Hệ thống Quản lý hồ sơ
+          Hệ thống Quản lý chung
         </h1>
         <p style={{
           fontSize: 'clamp(1rem, 3vw, 1.3rem)',
@@ -35,7 +35,7 @@ export default function LandingPage() {
           color: '#ff4757',
           marginTop: 6,
         }}>
-          Tổ Hoà Bình – Lạc Thuỷ
+          Theo dõi - Báo cáo tiến độ thực hiện nhiệm vụ
         </p>
       </div>
 
@@ -139,7 +139,7 @@ export default function LandingPage() {
               Báo cáo tiến độ công việc
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4 }}>
-              Điều tra hình sự - Điều tra cơ bản
+              Theo dõi - Báo cáo tiến độ thực hiện nhiệm vụ
             </div>
           </div>
         </button>
