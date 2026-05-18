@@ -643,30 +643,59 @@ app.put('/api/work-progress/:id', (req, res) => {
   }
 });
 
-app.get('/api/work-progress/export', (_req, res) => {
+app.get('/api/work-progress/export', (req, res) => {
   try {
-    const reports = readWorkProgressReports();
+    const normalizeQueryText = (value = '') => String(value).trim().toLowerCase();
+    const safeFilenamePart = (value = 'can-bo') =>
+      String(value)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'D')
+        .replace(/[^\w-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase() || 'can-bo';
+
+    const officerFilter = normalizeQueryText(req.query.officerName);
+    const teamFilter = normalizeQueryText(req.query.team);
+    let reports = readWorkProgressReports();
+    if (officerFilter) {
+      reports = reports.filter((report) => normalizeQueryText(report.officerName) === officerFilter);
+    }
+    if (teamFilter) {
+      reports = reports.filter((report) => normalizeQueryText(report.team) === teamFilter);
+    }
+
+    const officerName = reports[0]?.officerName || String(req.query.officerName || '');
+    const teamName = reports[0]?.team || String(req.query.team || '');
+    const isOfficerExport = Boolean(officerFilter);
     const sequenceByOfficerAndWork = new Map();
-    const rows = [
-      [
-        'STT',
-        'Họ tên',
-        'Đội',
-        'Vị trí công tác',
-        'Nhóm công tác',
-        'Nội dung công tác',
-        'Số lượng',
-        'Trích yếu cụ thể',
-        'Số hồ sơ',
-        'Tiến độ thực hiện',
-        'Thời hạn',
-        'Khó khăn vướng mắc',
-        'Đề xuất',
-        'Thụ lý chính',
-        'Đã hoàn thành',
-        'Ngày báo cáo',
-      ],
+    const headers = [
+      'STT',
+      'Họ tên',
+      'Đội',
+      'Vị trí công tác',
+      'Nhóm công tác',
+      'Nội dung công tác',
+      'Số lượng',
+      'Trích yếu cụ thể',
+      'Số hồ sơ',
+      'Tiến độ thực hiện',
+      'Thời hạn',
+      'Khó khăn vướng mắc',
+      'Đề xuất',
+      'Thụ lý chính',
+      'Đã hoàn thành',
+      'Ngày báo cáo',
     ];
+    const rows = isOfficerExport
+      ? [
+          ['BẢNG THEO DÕI TIẾN ĐỘ CÔNG VIỆC'],
+          [`- Họ và tên: ${officerName}\n- Đơn vị: ${teamName}`],
+          headers,
+        ]
+      : [headers];
+    let rowNumber = 1;
 
     reports.forEach((report) => {
       report.items.forEach((item) => {
@@ -674,7 +703,7 @@ app.get('/api/work-progress/export', (_req, res) => {
         const sequence = (sequenceByOfficerAndWork.get(sequenceKey) || 0) + 1;
         sequenceByOfficerAndWork.set(sequenceKey, sequence);
         rows.push([
-          rows.length,
+          rowNumber,
           report.officerName,
           report.team,
           report.positions.map((p) => p === 'doi_nghiep_vu' ? 'Đội nghiệp vụ' : 'Tham mưu tổng hợp').join(', '),
@@ -691,11 +720,19 @@ app.get('/api/work-progress/export', (_req, res) => {
           item.completed ? '✓' : '',
           new Date(report.createdAt).toLocaleDateString('vi-VN'),
         ]);
+        rowNumber += 1;
       });
     });
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(rows);
+    if (isOfficerExport) {
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
+      ];
+      ws['!rows'] = [{ hpt: 24 }, { hpt: 34 }];
+    }
     ws['!cols'] = [
       { wch: 5 },
       { wch: 22 },
@@ -716,7 +753,10 @@ app.get('/api/work-progress/export', (_req, res) => {
     ];
     XLSX.utils.book_append_sheet(wb, ws, 'Bao cao tien do');
     const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    res.setHeader('Content-Disposition', 'attachment; filename="bao-cao-tien-do-cong-viec.xlsx"');
+    const filename = isOfficerExport
+      ? `bao-cao-tien-do-${safeFilenamePart(officerName)}.xlsx`
+      : 'bao-cao-tien-do-cong-viec.xlsx';
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buf);
   } catch (err) {

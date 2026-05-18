@@ -11,6 +11,18 @@ import type {
 } from '../types';
 
 const STAFF_CATEGORY = 'Tham mưu tổng hợp';
+const STAFF_STAT_TYPE = 'Tham mưu tổng hợp';
+const STAFF_SECTION = {
+  title: '1. CÔNG TÁC THAM MƯU',
+  items: [
+    'Quản lý, khai thác, sử dụng hệ thống Văn bản điều hành',
+    'Tổng hợp, theo dõi, đánh giá tiến độ công tác thực hiện khắc phục hồ sơ tạm đình chỉ của đơn vị',
+    'Rà soát, kiểm tra, phê duyệt văn bản tố tụng trên phần mềm ĐTHS',
+    'Quản lý kho vũ khí, công cụ hỗ trợ, phương tiện của đơn vị',
+    'Quản lý hồ sơ, con dấu, công tác văn thư',
+    'Theo dõi tiến độ thực hiện báo cáo định kỳ, đột xuất công tác ĐTCB, NVCB trên phần mềm ĐTHS',
+  ],
+};
 const PRIMARY_CASE_CATEGORIES = new Set([
   '2. CÔNG TÁC ĐIỀU TRA, THỤ LÝ ÁN',
   '3. NHIỆM VỤ CHUNG CỦA ĐƠN VỊ',
@@ -55,14 +67,19 @@ const newItem = (category: string, workContent = ''): WorkProgressItem => ({
 const textKey = (value: string) => value.trim().toLowerCase();
 
 const itemPosition = (item: WorkProgressItem): WorkPosition =>
-  item.category === STAFF_CATEGORY ? 'tham_muu_tong_hop' : 'doi_nghiep_vu';
+  item.category === STAFF_CATEGORY || item.category === STAFF_SECTION.title ? 'tham_muu_tong_hop' : 'doi_nghiep_vu';
 
 const getDisplayText = (item: WorkProgressItem) =>
   item.summary || item.caseNumber || item.progress || '(chưa có trích yếu)';
 
 const getPlacementForItem = (item: WorkProgressItem): ActivePlacement | null => {
-  if (item.category === STAFF_CATEGORY) {
-    return { sectionTitle: STAFF_CATEGORY, label: STAFF_CATEGORY };
+  if (item.category === STAFF_CATEGORY || item.category === STAFF_SECTION.title) {
+    const isKnownItem = STAFF_SECTION.items.includes(item.workContent);
+    return {
+      sectionTitle: STAFF_SECTION.title,
+      label: isKnownItem ? item.workContent : 'Nội dung khác',
+      isCustom: !isKnownItem,
+    };
   }
 
   const section = OPERATION_SECTIONS.find((entry) => entry.title === item.category);
@@ -118,6 +135,22 @@ export default function WorkProgressPage() {
     return Array.from(names).sort((a, b) => a.localeCompare(b, 'vi'));
   }, [investigators, reports]);
 
+  const previousTeamByOfficer = useMemo(() => {
+    const map = new Map<string, string>();
+    reports.forEach((report) => {
+      const key = textKey(report.officerName);
+      if (key && report.team && !map.has(key)) map.set(key, report.team);
+    });
+    return map;
+  }, [reports]);
+
+  useEffect(() => {
+    const previousTeam = previousTeamByOfficer.get(textKey(officerName));
+    if (previousTeam) {
+      setTeam(previousTeam);
+    }
+  }, [officerName, previousTeamByOfficer]);
+
   const selectedOfficerReports = useMemo(() => {
     const name = textKey(officerName);
     if (!name) return [];
@@ -132,8 +165,12 @@ export default function WorkProgressPage() {
 
   const workTypes = useMemo(() => {
     const names = new Set<string>();
+    names.add(STAFF_STAT_TYPE);
     OPERATION_SECTIONS.forEach((section) => section.items.forEach((item) => names.add(item)));
-    reports.forEach((report) => report.items.forEach((item) => item.workContent && names.add(item.workContent)));
+    reports.forEach((report) => report.items.forEach((item) => {
+      const type = itemPosition(item) === 'tham_muu_tong_hop' ? STAFF_STAT_TYPE : item.workContent;
+      if (type) names.add(type);
+    }));
     return Array.from(names);
   }, [reports]);
 
@@ -162,7 +199,8 @@ export default function WorkProgressPage() {
         current.total += 1;
         if (item.completed) current.completed += 1;
         if (item.primaryCase) current.primaryCase += 1;
-        current.counts[item.workContent] = (current.counts[item.workContent] ?? 0) + 1;
+        const type = itemPosition(item) === 'tham_muu_tong_hop' ? STAFF_STAT_TYPE : item.workContent;
+        current.counts[type] = (current.counts[type] ?? 0) + 1;
       });
 
       map.set(key, current);
@@ -355,25 +393,27 @@ export default function WorkProgressPage() {
             <div className="section-card glass-panel">
               <div className="section-header">
                 <span className="section-title">Tham mưu tổng hợp</span>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  Chọn một đầu việc, nhập xong rồi lưu
+                </span>
               </div>
-              <button
-                className="btn-add"
-                type="button"
-                onClick={() => startNewItem(newItem(STAFF_CATEGORY), { sectionTitle: STAFF_CATEGORY, label: STAFF_CATEGORY })}
-              >
-                <Plus size={14} /> Thêm đầu việc
-              </button>
-              {activeItem && activePlacement?.sectionTitle === STAFF_CATEGORY && (
-                <InlineWorkForm
-                  item={activeItem}
+
+              <div className="work-section-list">
+                <WorkSection
+                  section={STAFF_SECTION}
+                  savedItems={flatOfficerItems}
+                  activeItem={activeItem}
+                  activePlacement={activePlacement}
                   editing={Boolean(editingReport)}
                   saving={saving}
                   canSubmit={canSubmit}
                   onChange={updateActiveItem}
                   onSubmit={submit}
                   onCancel={clearActiveItem}
+                  onNew={startNewItem}
+                  onEdit={startEditItem}
                 />
-              )}
+              </div>
             </div>
           )}
 
@@ -446,7 +486,12 @@ function WorkSection({
   onNew: (item: WorkProgressItem, placement?: ActivePlacement) => void;
   onEdit: (saved: SavedWorkItem) => void;
 }) {
-  const sectionItems = savedItems.filter(({ item }) => item.category === section.title);
+  const isStaffSection = section.title === STAFF_SECTION.title;
+  const sectionItems = savedItems.filter(({ item }) =>
+    isStaffSection
+      ? item.category === section.title || item.category === STAFF_CATEGORY
+      : item.category === section.title,
+  );
   const customItems = sectionItems.filter(({ item }) => !section.items.includes(item.workContent));
 
   return (
@@ -689,11 +734,26 @@ function OfficerItemsPanel({
   officerName: string;
   onEdit: (saved: SavedWorkItem) => void;
 }) {
+  const exactReport = items.find(({ report }) => textKey(report.officerName) === textKey(officerName))?.report;
+  const exportName = exactReport?.officerName || items[0]?.report.officerName || officerName;
+  const exportTeam = exactReport?.team || items[0]?.report.team;
+
   return (
     <div className="section-card glass-panel" style={{ marginTop: 18 }}>
       <div className="section-header">
         <span className="section-title">Đầu việc đã nhập của {officerName}</span>
-        <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{items.length} đầu việc</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{items.length} đầu việc</span>
+          {items.length > 0 && (
+            <button
+              className="btn-small"
+              type="button"
+              onClick={() => api.exportWorkProgressForOfficer(exportName, exportTeam)}
+            >
+              <Download size={14} /> Xuất riêng
+            </button>
+          )}
+        </div>
       </div>
       {items.length === 0 ? (
         <div className="empty-state">Chưa có đầu việc nào khớp tên đang nhập.</div>
@@ -766,6 +826,7 @@ function StatisticsPanel({
                 <th style={thStyle}>Tổng đầu việc</th>
                 <th style={thStyle}>Thụ lý chính</th>
                 <th style={thStyle}>Hoàn thành</th>
+                <th style={thStyle}>Xuất</th>
                 {workTypes.map((type) => (
                   <th style={thStyle} key={type}>{type}</th>
                 ))}
@@ -782,6 +843,15 @@ function StatisticsPanel({
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#1c9b56', fontWeight: 700 }}>
                       <CheckCircle2 size={14} /> {row.completed}
                     </span>
+                  </td>
+                  <td style={tdStyle}>
+                    <button
+                      className="btn-small"
+                      type="button"
+                      onClick={() => api.exportWorkProgressForOfficer(row.officerName, row.team)}
+                    >
+                      <Download size={14} /> Excel
+                    </button>
                   </td>
                   {workTypes.map((type) => (
                     <td style={tdStyle} key={type}>{row.counts[type] || ''}</td>

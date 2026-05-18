@@ -86,4 +86,10 @@ export const api = {
   exportWorkProgress: () => {
     window.location.href = '/api/work-progress/export';
   },
+
+  exportWorkProgressForOfficer: (officerName: string, team?: string) => {
+    const params = new URLSearchParams({ officerName });
+    if (team) params.set('team', team);
+    window.location.href = `/api/work-progress/export?${params.toString()}`;
+  },
 };
