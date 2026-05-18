@@ -86,6 +86,7 @@ export interface WorkProgressReport {
   id: string;
   officerName: string;
   team: string;
+  reportMonth: string;
   positions: WorkPosition[];
   items: WorkProgressItem[];
   createdAt: string;

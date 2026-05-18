@@ -98,12 +98,24 @@ function formatDate(value: string) {
   return `${day}/${month}/${year}`;
 }
 
+const getCurrentMonth = () => new Date().toISOString().slice(0, 7);
+
+const getReportMonth = (report: WorkProgressReport) =>
+  report.reportMonth || report.createdAt.slice(0, 7);
+
+const formatMonth = (value: string) => {
+  const [year, month] = value.split('-');
+  return month && year ? `tháng ${month}/${year}` : value;
+};
+
 export default function WorkProgressPage() {
   const navigate = useNavigate();
   const [reports, setReports] = useState<WorkProgressReport[]>([]);
   const [investigators, setInvestigators] = useState<Investigator[]>([]);
   const [officerName, setOfficerName] = useState('');
   const [team, setTeam] = useState('');
+  const [reportMonth, setReportMonth] = useState(getCurrentMonth);
+  const [trackingMonth, setTrackingMonth] = useState(getCurrentMonth);
   const [positions, setPositions] = useState<WorkPosition[]>([]);
   const [activeItem, setActiveItem] = useState<WorkProgressItem | null>(null);
   const [activePlacement, setActivePlacement] = useState<ActivePlacement | null>(null);
@@ -135,6 +147,23 @@ export default function WorkProgressPage() {
     return Array.from(names).sort((a, b) => a.localeCompare(b, 'vi'));
   }, [investigators, reports]);
 
+  const officerTarget = Math.max(investigators.length, 58);
+
+  const monthlyUpdatedOfficers = useMemo(() => {
+    const names = new Set<string>();
+    reports.forEach((report) => {
+      if (getReportMonth(report) === trackingMonth && report.officerName.trim()) {
+        names.add(textKey(report.officerName));
+      }
+    });
+    return names.size;
+  }, [reports, trackingMonth]);
+
+  const monthlyReports = useMemo(
+    () => reports.filter((report) => getReportMonth(report) === trackingMonth),
+    [reports, trackingMonth],
+  );
+
   const previousTeamByOfficer = useMemo(() => {
     const map = new Map<string, string>();
     reports.forEach((report) => {
@@ -154,8 +183,10 @@ export default function WorkProgressPage() {
   const selectedOfficerReports = useMemo(() => {
     const name = textKey(officerName);
     if (!name) return [];
-    return reports.filter((report) => textKey(report.officerName).includes(name));
-  }, [officerName, reports]);
+    return reports.filter((report) =>
+      textKey(report.officerName).includes(name) && getReportMonth(report) === reportMonth,
+    );
+  }, [officerName, reports, reportMonth]);
 
   const flatOfficerItems = useMemo(() => {
     return selectedOfficerReports.flatMap((report) =>
@@ -167,12 +198,12 @@ export default function WorkProgressPage() {
     const names = new Set<string>();
     names.add(STAFF_STAT_TYPE);
     OPERATION_SECTIONS.forEach((section) => section.items.forEach((item) => names.add(item)));
-    reports.forEach((report) => report.items.forEach((item) => {
+    monthlyReports.forEach((report) => report.items.forEach((item) => {
       const type = itemPosition(item) === 'tham_muu_tong_hop' ? STAFF_STAT_TYPE : item.workContent;
       if (type) names.add(type);
     }));
     return Array.from(names);
-  }, [reports]);
+  }, [monthlyReports]);
 
   const statsRows = useMemo(() => {
     const map = new Map<string, {
@@ -184,7 +215,7 @@ export default function WorkProgressPage() {
       counts: Record<string, number>;
     }>();
 
-    reports.forEach((report) => {
+    monthlyReports.forEach((report) => {
       const key = `${report.officerName}__${report.team}`;
       const current = map.get(key) ?? {
         officerName: report.officerName,
@@ -207,7 +238,7 @@ export default function WorkProgressPage() {
     });
 
     return Array.from(map.values()).sort((a, b) => b.total - a.total || a.officerName.localeCompare(b.officerName, 'vi'));
-  }, [reports]);
+  }, [monthlyReports]);
 
   const togglePosition = (position: WorkPosition) => {
     setPositions((prev) =>
@@ -231,6 +262,7 @@ export default function WorkProgressPage() {
   const startEditItem = (saved: SavedWorkItem) => {
     setOfficerName(saved.report.officerName);
     setTeam(saved.report.team);
+    setReportMonth(getReportMonth(saved.report));
     setPositions((prev) => {
       const next = new Set([...prev, ...saved.report.positions, itemPosition(saved.item)]);
       return Array.from(next);
@@ -259,6 +291,7 @@ export default function WorkProgressPage() {
         await api.updateWorkProgressReport(editingReport.id, {
           officerName: officerName.trim(),
           team: team.trim(),
+          reportMonth,
           positions: updatedPositions,
           items: updatedItems,
         });
@@ -267,6 +300,7 @@ export default function WorkProgressPage() {
         const payload: WorkProgressFormData = {
           officerName: officerName.trim(),
           team: team.trim(),
+          reportMonth,
           positions: [savedPosition],
           items: [activeItem],
         };
@@ -285,6 +319,7 @@ export default function WorkProgressPage() {
   const canSubmit = Boolean(
     officerName.trim() &&
     team.trim() &&
+    reportMonth &&
     activeItem?.workContent.trim() &&
     positions.includes(activeItem ? itemPosition(activeItem) : 'doi_nghiep_vu'),
   );
@@ -317,9 +352,13 @@ export default function WorkProgressPage() {
             BÁO CÁO TIẾN ĐỘ CÔNG VIỆC
           </div>
         </div>
-        <button className="btn-export" type="button" onClick={api.exportWorkProgress}>
-          <Download size={15} /> Xuất Excel
-        </button>
+        <MonthlyUpdatePanel
+          month={trackingMonth}
+          updated={monthlyUpdatedOfficers}
+          total={officerTarget}
+          reportCount={monthlyReports.length}
+          onMonthChange={setTrackingMonth}
+        />
       </div>
 
       <div className="filter-bar" style={{ marginBottom: 14 }}>
@@ -361,6 +400,16 @@ export default function WorkProgressPage() {
               <div className="form-group">
                 <label>Đội</label>
                 <input className="form-control" value={team} onChange={(e) => setTeam(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Tháng báo cáo</label>
+                <input
+                  className="form-control"
+                  type="month"
+                  value={reportMonth}
+                  onChange={(e) => setReportMonth(e.target.value)}
+                />
+                <div className="field-note">Mặc định tháng hiện tại, có thể chọn tháng trước để nhập bù.</div>
               </div>
               <div className="form-group">
                 <label>Vị trí công tác</label>
@@ -449,12 +498,79 @@ export default function WorkProgressPage() {
           )}
 
           {officerName.trim() && (
-            <OfficerItemsPanel items={flatOfficerItems} officerName={officerName} onEdit={startEditItem} />
+            <OfficerItemsPanel
+              items={flatOfficerItems}
+              officerName={officerName}
+              month={reportMonth}
+              onEdit={startEditItem}
+            />
           )}
         </>
       ) : (
-        <StatisticsPanel rows={statsRows} workTypes={workTypes} reportCount={reports.length} />
+        <StatisticsPanel
+          rows={statsRows}
+          workTypes={workTypes}
+          reportCount={monthlyReports.length}
+          month={trackingMonth}
+        />
       )}
+    </div>
+  );
+}
+
+function MonthlyUpdatePanel({
+  month,
+  updated,
+  total,
+  reportCount,
+  onMonthChange,
+}: {
+  month: string;
+  updated: number;
+  total: number;
+  reportCount: number;
+  onMonthChange: (value: string) => void;
+}) {
+  const percent = total ? Math.round((updated / total) * 100) : 0;
+
+  return (
+    <div style={{
+      minWidth: 330,
+      padding: 12,
+      border: '1px solid var(--panel-border)',
+      borderRadius: 8,
+      background: 'rgba(255,255,255,0.72)',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 8 }}>
+        <strong style={{ fontSize: '0.86rem' }}>Cập nhật realtime</strong>
+        <input
+          className="form-control"
+          type="month"
+          value={month}
+          onChange={(e) => onMonthChange(e.target.value)}
+          style={{ width: 150, minHeight: 34, padding: '6px 10px' }}
+        />
+      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <tbody>
+          <tr>
+            <td style={{ ...compactStatCell, textAlign: 'left' }}>
+              Có {updated}/{total} cán bộ đã cập nhật báo cáo tiến độ công việc
+            </td>
+            <td style={{ ...compactStatCell, textAlign: 'right', fontWeight: 800 }}>{percent}%</td>
+          </tr>
+          <tr>
+            <td style={{ ...compactStatCell, textAlign: 'left' }}>Báo cáo trong {formatMonth(month)}</td>
+            <td style={{ ...compactStatCell, textAlign: 'right', fontWeight: 800 }}>{reportCount}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style={{ height: 7, background: '#e7edf5', borderRadius: 99, overflow: 'hidden', marginTop: 8 }}>
+        <div style={{ width: `${Math.min(percent, 100)}%`, height: '100%', background: '#2ed573' }} />
+      </div>
+      <div className="field-note" style={{ marginTop: 6 }}>
+        Qua ngày 01, tháng hiện tại tự bắt đầu lại từ 0 nếu chưa có báo cáo mới.
+      </div>
     </div>
   );
 }
@@ -728,10 +844,12 @@ function InlineWorkForm({
 function OfficerItemsPanel({
   items,
   officerName,
+  month,
   onEdit,
 }: {
   items: SavedWorkItem[];
   officerName: string;
+  month: string;
   onEdit: (saved: SavedWorkItem) => void;
 }) {
   const exactReport = items.find(({ report }) => textKey(report.officerName) === textKey(officerName))?.report;
@@ -741,14 +859,16 @@ function OfficerItemsPanel({
   return (
     <div className="section-card glass-panel" style={{ marginTop: 18 }}>
       <div className="section-header">
-        <span className="section-title">Đầu việc đã nhập của {officerName}</span>
+        <span className="section-title">Profile báo cáo của {officerName}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{items.length} đầu việc</span>
+          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            {items.length} đầu việc trong {formatMonth(month)}
+          </span>
           {items.length > 0 && (
             <button
               className="btn-small"
               type="button"
-              onClick={() => api.exportWorkProgressForOfficer(exportName, exportTeam)}
+              onClick={() => api.exportWorkProgressForOfficer(exportName, exportTeam, month)}
             >
               <Download size={14} /> Xuất riêng
             </button>
@@ -756,7 +876,7 @@ function OfficerItemsPanel({
         </div>
       </div>
       {items.length === 0 ? (
-        <div className="empty-state">Chưa có đầu việc nào khớp tên đang nhập.</div>
+        <div className="empty-state">Chưa có đầu việc nào của cán bộ này trong {formatMonth(month)}.</div>
       ) : (
         <div className="point-list">
           {items.map(({ report, item }) => (
@@ -796,6 +916,7 @@ function StatisticsPanel({
   rows,
   workTypes,
   reportCount,
+  month,
 }: {
   rows: Array<{
     officerName: string;
@@ -807,12 +928,15 @@ function StatisticsPanel({
   }>;
   workTypes: string[];
   reportCount: number;
+  month: string;
 }) {
   return (
     <div className="section-card glass-panel">
       <div className="section-header">
         <span className="section-title">Thống kê đầu việc theo cán bộ</span>
-        <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{reportCount} báo cáo</span>
+        <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+          {reportCount} báo cáo trong {formatMonth(month)}
+        </span>
       </div>
       {rows.length === 0 ? (
         <div className="empty-state">Chưa có dữ liệu thống kê.</div>
@@ -848,7 +972,7 @@ function StatisticsPanel({
                     <button
                       className="btn-small"
                       type="button"
-                      onClick={() => api.exportWorkProgressForOfficer(row.officerName, row.team)}
+                      onClick={() => api.exportWorkProgressForOfficer(row.officerName, row.team, month)}
                     >
                       <Download size={14} /> Excel
                     </button>
@@ -882,4 +1006,11 @@ const tdStyle: React.CSSProperties = {
   fontSize: '0.86rem',
   textAlign: 'center',
   whiteSpace: 'nowrap',
+};
+
+const compactStatCell: React.CSSProperties = {
+  padding: '5px 0',
+  borderBottom: '1px solid var(--panel-border)',
+  color: 'var(--text-primary)',
+  fontSize: '0.84rem',
 };

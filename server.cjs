@@ -154,6 +154,8 @@ const normalizeWorkProgressItem = (raw = {}, index = 0) => ({
 
 const normalizeWorkProgressReport = (raw = {}) => {
   const createdAt = raw.createdAt || new Date().toISOString();
+  const fallbackMonth = createdAt.slice(0, 7);
+  const reportMonth = /^\d{4}-\d{2}$/.test(raw.reportMonth || '') ? raw.reportMonth : fallbackMonth;
   const positions = Array.isArray(raw.positions)
     ? raw.positions.filter((p) => ['tham_muu_tong_hop', 'doi_nghiep_vu'].includes(p))
     : [];
@@ -162,6 +164,7 @@ const normalizeWorkProgressReport = (raw = {}) => {
     id: raw.id || Date.now().toString(),
     officerName: raw.officerName?.trim() || '',
     team: raw.team?.trim() || '',
+    reportMonth,
     positions,
     items: Array.isArray(raw.items)
       ? raw.items.map(normalizeWorkProgressItem).filter((item) => item.workContent.trim())
@@ -622,6 +625,7 @@ app.put('/api/work-progress/:id', (req, res) => {
       ...existing,
       officerName: req.body.officerName ?? existing.officerName,
       team: req.body.team ?? existing.team,
+      reportMonth: req.body.reportMonth ?? existing.reportMonth,
       positions: req.body.positions ?? existing.positions,
       items: req.body.items ?? existing.items,
       updatedAt: new Date().toISOString(),
@@ -658,12 +662,16 @@ app.get('/api/work-progress/export', (req, res) => {
 
     const officerFilter = normalizeQueryText(req.query.officerName);
     const teamFilter = normalizeQueryText(req.query.team);
+    const monthFilter = /^\d{4}-\d{2}$/.test(req.query.reportMonth || '') ? String(req.query.reportMonth) : '';
     let reports = readWorkProgressReports();
     if (officerFilter) {
       reports = reports.filter((report) => normalizeQueryText(report.officerName) === officerFilter);
     }
     if (teamFilter) {
       reports = reports.filter((report) => normalizeQueryText(report.team) === teamFilter);
+    }
+    if (monthFilter) {
+      reports = reports.filter((report) => report.reportMonth === monthFilter);
     }
 
     const officerName = reports[0]?.officerName || String(req.query.officerName || '');
@@ -686,6 +694,7 @@ app.get('/api/work-progress/export', (req, res) => {
       'Đề xuất',
       'Thụ lý chính',
       'Đã hoàn thành',
+      'Tháng báo cáo',
       'Ngày báo cáo',
     ];
     const rows = isOfficerExport
@@ -718,6 +727,7 @@ app.get('/api/work-progress/export', (req, res) => {
           item.proposal,
           item.primaryCase ? '✓' : '',
           item.completed ? '✓' : '',
+          report.reportMonth,
           new Date(report.createdAt).toLocaleDateString('vi-VN'),
         ]);
         rowNumber += 1;
@@ -747,6 +757,7 @@ app.get('/api/work-progress/export', (req, res) => {
       { wch: 14 },
       { wch: 32 },
       { wch: 32 },
+      { wch: 14 },
       { wch: 14 },
       { wch: 14 },
       { wch: 14 },
