@@ -72,13 +72,13 @@ export interface WorkProgressItem {
   id: string;
   category: string;
   workContent: string;
-  quantity: string;
   summary: string;
   caseNumber: string;
   progress: string;
   deadline: string;
   difficulties: string;
   proposal: string;
+  completed: boolean;
 }
 
 export interface WorkProgressReport {

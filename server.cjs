@@ -142,13 +142,13 @@ const normalizeWorkProgressItem = (raw = {}, index = 0) => ({
   id: raw.id || `${Date.now()}-${index}`,
   category: raw.category || '',
   workContent: raw.workContent || '',
-  quantity: raw.quantity === undefined || raw.quantity === null ? '' : String(raw.quantity),
   summary: raw.summary || '',
   caseNumber: raw.caseNumber || '',
   progress: raw.progress || '',
   deadline: raw.deadline || '',
   difficulties: raw.difficulties || '',
   proposal: raw.proposal || '',
+  completed: raw.completed === true || raw.completed === 'true',
 });
 
 const normalizeWorkProgressReport = (raw = {}) => {
@@ -613,6 +613,7 @@ app.post('/api/work-progress', (req, res) => {
 app.get('/api/work-progress/export', (_req, res) => {
   try {
     const reports = readWorkProgressReports();
+    const sequenceByOfficerAndWork = new Map();
     const rows = [
       [
         'STT',
@@ -628,12 +629,16 @@ app.get('/api/work-progress/export', (_req, res) => {
         'Thời hạn',
         'Khó khăn vướng mắc',
         'Đề xuất',
+        'Đã hoàn thành',
         'Ngày báo cáo',
       ],
     ];
 
     reports.forEach((report) => {
       report.items.forEach((item) => {
+        const sequenceKey = `${report.officerName}__${item.workContent}`;
+        const sequence = (sequenceByOfficerAndWork.get(sequenceKey) || 0) + 1;
+        sequenceByOfficerAndWork.set(sequenceKey, sequence);
         rows.push([
           rows.length,
           report.officerName,
@@ -641,13 +646,14 @@ app.get('/api/work-progress/export', (_req, res) => {
           report.positions.map((p) => p === 'doi_nghiep_vu' ? 'Đội nghiệp vụ' : 'Tham mưu tổng hợp').join(', '),
           item.category,
           item.workContent,
-          item.quantity,
+          sequence,
           item.summary,
           item.caseNumber,
           item.progress,
           item.deadline,
           item.difficulties,
           item.proposal,
+          item.completed ? '✓' : '',
           new Date(report.createdAt).toLocaleDateString('vi-VN'),
         ]);
       });
@@ -669,6 +675,7 @@ app.get('/api/work-progress/export', (_req, res) => {
       { wch: 14 },
       { wch: 32 },
       { wch: 32 },
+      { wch: 14 },
       { wch: 14 },
     ];
     XLSX.utils.book_append_sheet(wb, ws, 'Bao cao tien do');
