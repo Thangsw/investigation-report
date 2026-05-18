@@ -12,6 +12,7 @@ const reportsFile = path.join(DATA_DIR, 'reports.json');
 const investigatorsFile = path.join(DATA_DIR, 'investigators.json');
 const configFile = path.join(DATA_DIR, 'config.json');
 const pendingChangesFile = path.join(DATA_DIR, 'pending-changes.json');
+const workProgressFile = path.join(DATA_DIR, 'work-progress-reports.json');
 
 const DEFAULT_CONFIG = {
   totalCaseTarget: 610,
@@ -135,6 +136,51 @@ const readPendingChanges = () => {
 };
 const writePendingChanges = (data) => {
   fs.writeFileSync(pendingChangesFile, JSON.stringify(data, null, 2));
+};
+
+const normalizeWorkProgressItem = (raw = {}, index = 0) => ({
+  id: raw.id || `${Date.now()}-${index}`,
+  category: raw.category || '',
+  workContent: raw.workContent || '',
+  quantity: raw.quantity === undefined || raw.quantity === null ? '' : String(raw.quantity),
+  summary: raw.summary || '',
+  caseNumber: raw.caseNumber || '',
+  progress: raw.progress || '',
+  deadline: raw.deadline || '',
+  difficulties: raw.difficulties || '',
+  proposal: raw.proposal || '',
+});
+
+const normalizeWorkProgressReport = (raw = {}) => {
+  const createdAt = raw.createdAt || new Date().toISOString();
+  const positions = Array.isArray(raw.positions)
+    ? raw.positions.filter((p) => ['tham_muu_tong_hop', 'doi_nghiep_vu'].includes(p))
+    : [];
+
+  return {
+    id: raw.id || Date.now().toString(),
+    officerName: raw.officerName?.trim() || '',
+    team: raw.team?.trim() || '',
+    positions,
+    items: Array.isArray(raw.items)
+      ? raw.items.map(normalizeWorkProgressItem).filter((item) => item.workContent.trim())
+      : [],
+    createdAt,
+    updatedAt: raw.updatedAt || createdAt,
+  };
+};
+
+const readWorkProgressReports = () => {
+  if (!fs.existsSync(workProgressFile)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(workProgressFile, 'utf8')).map(normalizeWorkProgressReport);
+  } catch {
+    return [];
+  }
+};
+
+const writeWorkProgressReports = (data) => {
+  fs.writeFileSync(workProgressFile, JSON.stringify(data.map(normalizeWorkProgressReport), null, 2));
 };
 
 app.get('/api/reports/export', (req, res) => {
@@ -527,6 +573,115 @@ app.put('/api/pending-changes/:id/reject', (req, res) => {
 });
 
 const distPath = path.join(__dirname, 'dist');
+app.get('/api/work-progress', (_req, res) => {
+  try {
+    const reports = readWorkProgressReports();
+    reports.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    res.json(reports);
+  } catch (err) {
+    res.status(500).json({ error: 'Lỗi đọc báo cáo tiến độ' });
+  }
+});
+
+app.post('/api/work-progress', (req, res) => {
+  try {
+    const normalized = normalizeWorkProgressReport(req.body);
+    if (!normalized.officerName || !normalized.team || normalized.positions.length === 0) {
+      return res.status(400).json({ error: 'Thiếu Họ tên, Đội hoặc Vị trí công tác' });
+    }
+    if (normalized.items.length === 0) {
+      return res.status(400).json({ error: 'Cần nhập ít nhất một nội dung công việc' });
+    }
+
+    const now = new Date().toISOString();
+    const reports = readWorkProgressReports();
+    const newReport = normalizeWorkProgressReport({
+      ...normalized,
+      id: Date.now().toString(),
+      createdAt: now,
+      updatedAt: now,
+    });
+    reports.push(newReport);
+    writeWorkProgressReports(reports);
+    res.status(201).json({ message: 'Đã lưu báo cáo tiến độ', data: newReport });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Lỗi lưu báo cáo tiến độ' });
+  }
+});
+
+app.get('/api/work-progress/export', (_req, res) => {
+  try {
+    const reports = readWorkProgressReports();
+    const rows = [
+      [
+        'STT',
+        'Họ tên',
+        'Đội',
+        'Vị trí công tác',
+        'Nhóm công tác',
+        'Nội dung công tác',
+        'Số lượng',
+        'Trích yếu cụ thể',
+        'Số hồ sơ',
+        'Tiến độ thực hiện',
+        'Thời hạn',
+        'Khó khăn vướng mắc',
+        'Đề xuất',
+        'Ngày báo cáo',
+      ],
+    ];
+
+    reports.forEach((report) => {
+      report.items.forEach((item) => {
+        rows.push([
+          rows.length,
+          report.officerName,
+          report.team,
+          report.positions.map((p) => p === 'doi_nghiep_vu' ? 'Đội nghiệp vụ' : 'Tham mưu tổng hợp').join(', '),
+          item.category,
+          item.workContent,
+          item.quantity,
+          item.summary,
+          item.caseNumber,
+          item.progress,
+          item.deadline,
+          item.difficulties,
+          item.proposal,
+          new Date(report.createdAt).toLocaleDateString('vi-VN'),
+        ]);
+      });
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: 5 },
+      { wch: 22 },
+      { wch: 18 },
+      { wch: 28 },
+      { wch: 32 },
+      { wch: 28 },
+      { wch: 10 },
+      { wch: 35 },
+      { wch: 18 },
+      { wch: 25 },
+      { wch: 14 },
+      { wch: 32 },
+      { wch: 32 },
+      { wch: 14 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Bao cao tien do');
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', 'attachment; filename="bao-cao-tien-do-cong-viec.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buf);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Lỗi xuất Excel báo cáo tiến độ' });
+  }
+});
+
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
   app.get('/{*path}', (_req, res) => {

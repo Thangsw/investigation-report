@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, FileSearch } from 'lucide-react';
+import { ClipboardList, Shield, FileSearch } from 'lucide-react';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -45,7 +45,7 @@ export default function LandingPage() {
         flexWrap: 'wrap',
         justifyContent: 'center',
         width: '100%',
-        maxWidth: 720,
+        maxWidth: 1080,
       }}>
         {/* Điều tra hình sự */}
         <button
@@ -92,6 +92,54 @@ export default function LandingPage() {
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4 }}>
               Quản lý hồ sơ tạm đình chỉ
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => navigate('/bao-cao-tien-do')}
+          style={{
+            flex: '1 1 260px',
+            maxWidth: 320,
+            minHeight: 200,
+            background: 'linear-gradient(135deg, rgba(46,213,115,0.18) 0%, rgba(46,213,115,0.06) 100%)',
+            border: '2px solid rgba(46,213,115,0.42)',
+            borderRadius: 18,
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 16,
+            padding: 32,
+            transition: 'transform 0.15s, border-color 0.15s, box-shadow 0.15s',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-4px)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = '#2ed573';
+            (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 32px rgba(46,213,115,0.22)';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.transform = '';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(46,213,115,0.42)';
+            (e.currentTarget as HTMLButtonElement).style.boxShadow = '';
+          }}
+        >
+          <div style={{
+            width: 64, height: 64, borderRadius: '50%',
+            background: 'rgba(46,213,115,0.14)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <ClipboardList size={32} color="#1c9b56" />
+          </div>
+          <div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+              Báo cáo tiến độ công việc
+            </div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4 }}>
+              Điều tra hình sự - Điều tra cơ bản
             </div>
           </div>
         </button>

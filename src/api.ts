@@ -1,5 +1,13 @@
 import axios from 'axios';
-import type { Report, Investigator, ReportFormData, AppConfig, PendingChange } from './types';
+import type {
+  Report,
+  Investigator,
+  ReportFormData,
+  AppConfig,
+  PendingChange,
+  WorkProgressReport,
+  WorkProgressFormData,
+} from './types';
 
 export const api = {
   // ── Reports ──────────────────────────────────────────────────────────────
@@ -64,4 +72,15 @@ export const api = {
 
   rejectPendingChange: (id: string) =>
     axios.put<{ data: PendingChange }>(`/api/pending-changes/${id}/reject`).then(r => r.data.data),
+
+  // Work progress reports
+  getWorkProgressReports: () =>
+    axios.get<WorkProgressReport[]>('/api/work-progress').then(r => r.data),
+
+  createWorkProgressReport: (data: WorkProgressFormData) =>
+    axios.post<{ data: WorkProgressReport }>('/api/work-progress', data).then(r => r.data.data),
+
+  exportWorkProgress: () => {
+    window.location.href = '/api/work-progress/export';
+  },
 };

@@ -5,6 +5,7 @@ import ReportPage from './pages/ReportPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import StatisticsPage from './pages/StatisticsPage';
+import WorkProgressPage from './pages/WorkProgressPage';
 
 function AppShell() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/bao-cao-tien-do" element={<WorkProgressPage />} />
       <Route path="/hs/*" element={<AppShell />} />
     </Routes>
   );

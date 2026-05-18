@@ -65,3 +65,30 @@ export interface PendingChange {
   requestedAt: string;
   status: 'pending' | 'approved' | 'rejected';
 }
+
+export type WorkPosition = 'tham_muu_tong_hop' | 'doi_nghiep_vu';
+
+export interface WorkProgressItem {
+  id: string;
+  category: string;
+  workContent: string;
+  quantity: string;
+  summary: string;
+  caseNumber: string;
+  progress: string;
+  deadline: string;
+  difficulties: string;
+  proposal: string;
+}
+
+export interface WorkProgressReport {
+  id: string;
+  officerName: string;
+  team: string;
+  positions: WorkPosition[];
+  items: WorkProgressItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WorkProgressFormData = Omit<WorkProgressReport, 'id' | 'createdAt' | 'updatedAt'>;
