@@ -80,6 +80,9 @@ export const api = {
   createWorkProgressReport: (data: WorkProgressFormData) =>
     axios.post<{ data: WorkProgressReport }>('/api/work-progress', data).then(r => r.data.data),
 
+  updateWorkProgressReport: (id: string, data: WorkProgressFormData) =>
+    axios.put<{ data: WorkProgressReport }>(`/api/work-progress/${id}`, data).then(r => r.data.data),
+
   exportWorkProgress: () => {
     window.location.href = '/api/work-progress/export';
   },

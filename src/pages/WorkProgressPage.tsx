@@ -11,6 +11,10 @@ import type {
 } from '../types';
 
 const STAFF_CATEGORY = 'Tham mưu tổng hợp';
+const PRIMARY_CASE_CATEGORIES = new Set([
+  '2. CÔNG TÁC ĐIỀU TRA, THỤ LÝ ÁN',
+  '3. NHIỆM VỤ CHUNG CỦA ĐƠN VỊ',
+]);
 
 const OPERATION_SECTIONS = [
   {
@@ -31,6 +35,8 @@ const OPERATION_SECTIONS = [
   },
 ];
 
+type SavedWorkItem = { report: WorkProgressReport; item: WorkProgressItem };
+
 const newItem = (category: string, workContent = ''): WorkProgressItem => ({
   id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
   category,
@@ -41,6 +47,7 @@ const newItem = (category: string, workContent = ''): WorkProgressItem => ({
   deadline: '',
   difficulties: '',
   proposal: '',
+  primaryCase: false,
   completed: false,
 });
 
@@ -48,6 +55,9 @@ const textKey = (value: string) => value.trim().toLowerCase();
 
 const itemPosition = (item: WorkProgressItem): WorkPosition =>
   item.category === STAFF_CATEGORY ? 'tham_muu_tong_hop' : 'doi_nghiep_vu';
+
+const getDisplayText = (item: WorkProgressItem) =>
+  item.summary || item.caseNumber || item.progress || '(chưa có trích yếu)';
 
 function formatDate(value: string) {
   if (!value) return '';
@@ -63,6 +73,7 @@ export default function WorkProgressPage() {
   const [team, setTeam] = useState('');
   const [positions, setPositions] = useState<WorkPosition[]>([]);
   const [activeItem, setActiveItem] = useState<WorkProgressItem | null>(null);
+  const [editingReport, setEditingReport] = useState<WorkProgressReport | null>(null);
   const [activeTab, setActiveTab] = useState<'form' | 'stats'>('form');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
@@ -115,6 +126,7 @@ export default function WorkProgressPage() {
       team: string;
       total: number;
       completed: number;
+      primaryCase: number;
       counts: Record<string, number>;
     }>();
 
@@ -125,12 +137,14 @@ export default function WorkProgressPage() {
         team: report.team,
         total: 0,
         completed: 0,
+        primaryCase: 0,
         counts: {},
       };
 
       report.items.forEach((item) => {
         current.total += 1;
         if (item.completed) current.completed += 1;
+        if (item.primaryCase) current.primaryCase += 1;
         current.counts[item.workContent] = (current.counts[item.workContent] ?? 0) + 1;
       });
 
@@ -144,11 +158,29 @@ export default function WorkProgressPage() {
     setPositions((prev) =>
       prev.includes(position) ? prev.filter((item) => item !== position) : [...prev, position],
     );
-    setActiveItem(null);
+    clearActiveItem();
   };
 
-  const selectItem = (item: WorkProgressItem) => {
+  const clearActiveItem = () => {
+    setActiveItem(null);
+    setEditingReport(null);
+  };
+
+  const startNewItem = (item: WorkProgressItem) => {
     setActiveItem(item);
+    setEditingReport(null);
+  };
+
+  const startEditItem = (saved: SavedWorkItem) => {
+    setOfficerName(saved.report.officerName);
+    setTeam(saved.report.team);
+    setPositions((prev) => {
+      const next = new Set([...prev, ...saved.report.positions, itemPosition(saved.item)]);
+      return Array.from(next);
+    });
+    setActiveItem({ ...saved.item });
+    setEditingReport(saved.report);
+    setActiveTab('form');
   };
 
   const updateActiveItem = (key: keyof WorkProgressItem, value: string | boolean) => {
@@ -158,18 +190,33 @@ export default function WorkProgressPage() {
   const submit = async () => {
     if (!activeItem) return;
     const savedPosition = itemPosition(activeItem);
-    const payload: WorkProgressFormData = {
-      officerName: officerName.trim(),
-      team: team.trim(),
-      positions: [savedPosition],
-      items: [activeItem],
-    };
 
     setSaving(true);
     try {
-      await api.createWorkProgressReport(payload);
-      setToast('Đã lưu đầu việc');
-      setActiveItem(null);
+      if (editingReport) {
+        const updatedItems = editingReport.items.map((item) =>
+          item.id === activeItem.id ? activeItem : item,
+        );
+        const updatedPositions = Array.from(new Set([...editingReport.positions, savedPosition]));
+        await api.updateWorkProgressReport(editingReport.id, {
+          officerName: officerName.trim(),
+          team: team.trim(),
+          positions: updatedPositions,
+          items: updatedItems,
+        });
+        setToast('Đã cập nhật đầu việc');
+      } else {
+        const payload: WorkProgressFormData = {
+          officerName: officerName.trim(),
+          team: team.trim(),
+          positions: [savedPosition],
+          items: [activeItem],
+        };
+        await api.createWorkProgressReport(payload);
+        setToast('Đã lưu đầu việc');
+      }
+
+      clearActiveItem();
       await fetchAll();
     } finally {
       setSaving(false);
@@ -283,10 +330,10 @@ export default function WorkProgressPage() {
             <div className="section-card glass-panel">
               <div className="section-header">
                 <span className="section-title">Tham mưu tổng hợp</span>
-                <button className="btn-add" type="button" onClick={() => selectItem(newItem(STAFF_CATEGORY))}>
-                  <Plus size={14} /> Thêm đầu việc
-                </button>
               </div>
+              <button className="btn-add" type="button" onClick={() => startNewItem(newItem(STAFF_CATEGORY))}>
+                <Plus size={14} /> Thêm đầu việc
+              </button>
             </div>
           )}
 
@@ -299,37 +346,24 @@ export default function WorkProgressPage() {
                 </span>
               </div>
 
-              {OPERATION_SECTIONS.map((section) => (
-                <div key={section.title} style={{ marginBottom: 18 }}>
-                  <div style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>{section.title}</div>
-                  <div className="filter-bar">
-                    {section.items.map((label) => (
-                      <button
-                        key={label}
-                        className="btn-small"
-                        type="button"
-                        onClick={() => selectItem(newItem(section.title, label))}
-                      >
-                        <Plus size={13} /> {label}
-                      </button>
-                    ))}
-                    <button
-                      className="btn-add"
-                      type="button"
-                      onClick={() => selectItem(newItem(section.title))}
-                    >
-                      <Plus size={13} /> Nội dung khác
-                    </button>
-                  </div>
-                </div>
-              ))}
+              <div className="work-section-list">
+                {OPERATION_SECTIONS.map((section) => (
+                  <WorkSection
+                    key={section.title}
+                    section={section}
+                    savedItems={flatOfficerItems}
+                    onNew={startNewItem}
+                    onEdit={startEditItem}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
           {activeItem && (
             <div className="section-card glass-panel">
               <div className="section-header">
-                <span className="section-title">Đang nhập đầu việc</span>
+                <span className="section-title">{editingReport ? 'Đang sửa đầu việc' : 'Đang nhập đầu việc'}</span>
                 <span className="badge badge-current">{activeItem.category}</span>
               </div>
               <div className="form-row">
@@ -362,6 +396,16 @@ export default function WorkProgressPage() {
                 </div>
                 <div className="form-group">
                   <label>Trạng thái</label>
+                  {PRIMARY_CASE_CATEGORIES.has(activeItem.category) && (
+                    <label className="checkbox-row">
+                      <input
+                        type="checkbox"
+                        checked={activeItem.primaryCase}
+                        onChange={(e) => updateActiveItem('primaryCase', e.target.checked)}
+                      />
+                      Thụ lý chính
+                    </label>
+                  )}
                   <label className="checkbox-row">
                     <input
                       type="checkbox"
@@ -382,14 +426,19 @@ export default function WorkProgressPage() {
                   <input className="form-control" value={activeItem.proposal} onChange={(e) => updateActiveItem('proposal', e.target.value)} />
                 </div>
               </div>
-              <button className="btn-submit" type="button" disabled={!canSubmit || saving} onClick={submit}>
-                <Save size={17} /> {saving ? 'Đang lưu...' : 'Lưu đầu việc'}
-              </button>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button className="btn-submit" type="button" disabled={!canSubmit || saving} onClick={submit} style={{ flex: '1 1 220px' }}>
+                  <Save size={17} /> {saving ? 'Đang lưu...' : editingReport ? 'Lưu chỉnh sửa' : 'Lưu đầu việc'}
+                </button>
+                <button className="btn-small" type="button" onClick={clearActiveItem} style={{ minHeight: 46 }}>
+                  Huỷ
+                </button>
+              </div>
             </div>
           )}
 
           {officerName.trim() && (
-            <OfficerItemsPanel items={flatOfficerItems} officerName={officerName} />
+            <OfficerItemsPanel items={flatOfficerItems} officerName={officerName} onEdit={startEditItem} />
           )}
         </>
       ) : (
@@ -399,12 +448,104 @@ export default function WorkProgressPage() {
   );
 }
 
+function WorkSection({
+  section,
+  savedItems,
+  onNew,
+  onEdit,
+}: {
+  section: { title: string; items: string[] };
+  savedItems: SavedWorkItem[];
+  onNew: (item: WorkProgressItem) => void;
+  onEdit: (saved: SavedWorkItem) => void;
+}) {
+  const sectionItems = savedItems.filter(({ item }) => item.category === section.title);
+  const customItems = sectionItems.filter(({ item }) => !section.items.includes(item.workContent));
+
+  return (
+    <div className="work-section">
+      <div className="work-section-title">{section.title}</div>
+      <div className="work-option-list">
+        {section.items.map((label) => (
+          <WorkOption
+            key={label}
+            label={label}
+            sectionTitle={section.title}
+            savedItems={sectionItems.filter(({ item }) => item.workContent === label)}
+            onNew={onNew}
+            onEdit={onEdit}
+          />
+        ))}
+        <WorkOption
+          label="Nội dung khác"
+          sectionTitle={section.title}
+          savedItems={customItems}
+          onNew={onNew}
+          onEdit={onEdit}
+          isCustom
+        />
+      </div>
+    </div>
+  );
+}
+
+function WorkOption({
+  label,
+  sectionTitle,
+  savedItems,
+  onNew,
+  onEdit,
+  isCustom = false,
+}: {
+  label: string;
+  sectionTitle: string;
+  savedItems: SavedWorkItem[];
+  onNew: (item: WorkProgressItem) => void;
+  onEdit: (saved: SavedWorkItem) => void;
+  isCustom?: boolean;
+}) {
+  return (
+    <div className="work-option">
+      <div className="work-option-head">
+        <div className="work-option-label">{label}</div>
+        <button
+          className={isCustom ? 'btn-add' : 'btn-small'}
+          type="button"
+          onClick={() => onNew(newItem(sectionTitle, isCustom ? '' : label))}
+        >
+          <Plus size={13} /> Thêm mới
+        </button>
+      </div>
+      {savedItems.length > 0 && (
+        <div className="work-summary-list">
+          {savedItems.map((saved, index) => (
+            <button
+              key={`${saved.report.id}-${saved.item.id}`}
+              type="button"
+              className="work-summary-row"
+              onClick={() => onEdit(saved)}
+              title="Bấm để sửa đầu việc này"
+            >
+              <span>{index + 1}.</span>
+              <span>{getDisplayText(saved.item)}</span>
+              {saved.item.primaryCase && <span className="badge badge-ad">Thụ lý chính</span>}
+              {saved.item.completed && <span className="badge badge-ak">Đã hoàn thành</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OfficerItemsPanel({
   items,
   officerName,
+  onEdit,
 }: {
-  items: Array<{ report: WorkProgressReport; item: WorkProgressItem }>;
+  items: SavedWorkItem[];
   officerName: string;
+  onEdit: (saved: SavedWorkItem) => void;
 }) {
   return (
     <div className="section-card glass-panel" style={{ marginTop: 18 }}>
@@ -417,11 +558,18 @@ function OfficerItemsPanel({
       ) : (
         <div className="point-list">
           {items.map(({ report, item }) => (
-            <div className="point-item" key={`${report.id}-${item.id}`}>
+            <button
+              type="button"
+              className="point-item"
+              key={`${report.id}-${item.id}`}
+              onClick={() => onEdit({ report, item })}
+              style={{ textAlign: 'left', cursor: 'pointer' }}
+            >
               <div className="point-item-header">
                 <strong>{item.workContent}</strong>
                 <div className="point-item-badges">
                   <span className="badge badge-current">{item.category}</span>
+                  {item.primaryCase && <span className="badge badge-ad">Thụ lý chính</span>}
                   {item.completed && <span className="badge badge-ak">Đã hoàn thành</span>}
                 </div>
               </div>
@@ -434,7 +582,7 @@ function OfficerItemsPanel({
                 {item.proposal && <div>Đề xuất: {item.proposal}</div>}
                 <div className="point-time">Ngày nhập: {new Date(report.createdAt).toLocaleDateString('vi-VN')}</div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -452,6 +600,7 @@ function StatisticsPanel({
     team: string;
     total: number;
     completed: number;
+    primaryCase: number;
     counts: Record<string, number>;
   }>;
   workTypes: string[];
@@ -473,6 +622,7 @@ function StatisticsPanel({
                 <th style={thStyle}>Cán bộ</th>
                 <th style={thStyle}>Đội</th>
                 <th style={thStyle}>Tổng đầu việc</th>
+                <th style={thStyle}>Thụ lý chính</th>
                 <th style={thStyle}>Hoàn thành</th>
                 {workTypes.map((type) => (
                   <th style={thStyle} key={type}>{type}</th>
@@ -485,6 +635,7 @@ function StatisticsPanel({
                   <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 700 }}>{row.officerName}</td>
                   <td style={tdStyle}>{row.team}</td>
                   <td style={tdStyle}>{row.total}</td>
+                  <td style={tdStyle}>{row.primaryCase || ''}</td>
                   <td style={tdStyle}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#1c9b56', fontWeight: 700 }}>
                       <CheckCircle2 size={14} /> {row.completed}

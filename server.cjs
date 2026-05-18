@@ -148,6 +148,7 @@ const normalizeWorkProgressItem = (raw = {}, index = 0) => ({
   deadline: raw.deadline || '',
   difficulties: raw.difficulties || '',
   proposal: raw.proposal || '',
+  primaryCase: raw.primaryCase === true || raw.primaryCase === 'true',
   completed: raw.completed === true || raw.completed === 'true',
 });
 
@@ -610,6 +611,38 @@ app.post('/api/work-progress', (req, res) => {
   }
 });
 
+app.put('/api/work-progress/:id', (req, res) => {
+  try {
+    const reports = readWorkProgressReports();
+    const idx = reports.findIndex((report) => report.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Không tìm thấy báo cáo tiến độ' });
+
+    const existing = reports[idx];
+    const updated = normalizeWorkProgressReport({
+      ...existing,
+      officerName: req.body.officerName ?? existing.officerName,
+      team: req.body.team ?? existing.team,
+      positions: req.body.positions ?? existing.positions,
+      items: req.body.items ?? existing.items,
+      updatedAt: new Date().toISOString(),
+    });
+
+    if (!updated.officerName || !updated.team || updated.positions.length === 0) {
+      return res.status(400).json({ error: 'Thiếu Họ tên, Đội hoặc Vị trí công tác' });
+    }
+    if (updated.items.length === 0) {
+      return res.status(400).json({ error: 'Cần nhập ít nhất một nội dung công việc' });
+    }
+
+    reports[idx] = updated;
+    writeWorkProgressReports(reports);
+    res.json({ message: 'Đã cập nhật báo cáo tiến độ', data: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Lỗi cập nhật báo cáo tiến độ' });
+  }
+});
+
 app.get('/api/work-progress/export', (_req, res) => {
   try {
     const reports = readWorkProgressReports();
@@ -629,6 +662,7 @@ app.get('/api/work-progress/export', (_req, res) => {
         'Thời hạn',
         'Khó khăn vướng mắc',
         'Đề xuất',
+        'Thụ lý chính',
         'Đã hoàn thành',
         'Ngày báo cáo',
       ],
@@ -653,6 +687,7 @@ app.get('/api/work-progress/export', (_req, res) => {
           item.deadline,
           item.difficulties,
           item.proposal,
+          item.primaryCase ? '✓' : '',
           item.completed ? '✓' : '',
           new Date(report.createdAt).toLocaleDateString('vi-VN'),
         ]);
@@ -675,6 +710,7 @@ app.get('/api/work-progress/export', (_req, res) => {
       { wch: 14 },
       { wch: 32 },
       { wch: 32 },
+      { wch: 14 },
       { wch: 14 },
       { wch: 14 },
     ];

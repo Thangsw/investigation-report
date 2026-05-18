@@ -78,6 +78,7 @@ export interface WorkProgressItem {
   deadline: string;
   difficulties: string;
   proposal: string;
+  primaryCase: boolean;
   completed: boolean;
 }
 
