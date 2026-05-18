@@ -344,6 +344,11 @@ export default function WorkProgressPage() {
                 </label>
               </div>
             </div>
+            {(!officerName.trim() || positions.length === 0) && (
+              <div className="field-note" style={{ marginTop: 12, fontWeight: 700 }}>
+                Nhập tên và chọn vị trí công tác để tiếp tục
+              </div>
+            )}
           </div>
 
           {hasStaff && (
