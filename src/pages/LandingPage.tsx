@@ -96,14 +96,15 @@ export default function LandingPage() {
           </div>
         </button>
 
+        {/* Kích hoạt VNeID */}
         <button
-          onClick={() => navigate('/bao-cao-tien-do')}
+          onClick={() => window.location.href = '/vneid/index.html'}
           style={{
             flex: '1 1 260px',
             maxWidth: 320,
             minHeight: 200,
-            background: 'linear-gradient(135deg, rgba(46,213,115,0.18) 0%, rgba(46,213,115,0.06) 100%)',
-            border: '2px solid rgba(46,213,115,0.42)',
+            background: 'linear-gradient(135deg, rgba(6,182,212,0.18) 0%, rgba(6,182,212,0.06) 100%)',
+            border: '2px solid rgba(6,182,212,0.42)',
             borderRadius: 18,
             cursor: 'pointer',
             display: 'flex',
@@ -118,28 +119,28 @@ export default function LandingPage() {
           }}
           onMouseEnter={e => {
             (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-4px)';
-            (e.currentTarget as HTMLButtonElement).style.borderColor = '#2ed573';
-            (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 32px rgba(46,213,115,0.22)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = '#06b6d4';
+            (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 32px rgba(6,182,212,0.22)';
           }}
           onMouseLeave={e => {
             (e.currentTarget as HTMLButtonElement).style.transform = '';
-            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(46,213,115,0.42)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(6,182,212,0.42)';
             (e.currentTarget as HTMLButtonElement).style.boxShadow = '';
           }}
         >
           <div style={{
             width: 64, height: 64, borderRadius: '50%',
-            background: 'rgba(46,213,115,0.14)',
+            background: 'rgba(6,182,212,0.14)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <ClipboardList size={32} color="#1c9b56" />
+            <Fingerprint size={32} color="#06b6d4" />
           </div>
           <div>
             <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              Báo cáo tiến độ công việc
+              Kích hoạt VNeID
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4 }}>
-              Theo dõi - Báo cáo tiến độ thực hiện nhiệm vụ
+              Thực hiện chỉ tiêu kích hoạt của CAT
             </div>
           </div>
         </button>
@@ -189,15 +190,15 @@ export default function LandingPage() {
           </div>
         </button>
 
-        {/* Kích hoạt VNeID */}
+        {/* Báo cáo tiến độ công việc */}
         <button
-          onClick={() => window.location.href = '/vneid/index.html'}
+          onClick={() => navigate('/bao-cao-tien-do')}
           style={{
             flex: '1 1 260px',
             maxWidth: 320,
             minHeight: 200,
-            background: 'linear-gradient(135deg, rgba(6,182,212,0.18) 0%, rgba(6,182,212,0.06) 100%)',
-            border: '2px solid rgba(6,182,212,0.42)',
+            background: 'linear-gradient(135deg, rgba(46,213,115,0.18) 0%, rgba(46,213,115,0.06) 100%)',
+            border: '2px solid rgba(46,213,115,0.42)',
             borderRadius: 18,
             cursor: 'pointer',
             display: 'flex',
@@ -212,25 +213,25 @@ export default function LandingPage() {
           }}
           onMouseEnter={e => {
             (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-4px)';
-            (e.currentTarget as HTMLButtonElement).style.borderColor = '#06b6d4';
-            (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 32px rgba(6,182,212,0.22)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = '#2ed573';
+            (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 32px rgba(46,213,115,0.22)';
           }}
           onMouseLeave={e => {
             (e.currentTarget as HTMLButtonElement).style.transform = '';
-            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(6,182,212,0.42)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(46,213,115,0.42)';
             (e.currentTarget as HTMLButtonElement).style.boxShadow = '';
           }}
         >
           <div style={{
             width: 64, height: 64, borderRadius: '50%',
-            background: 'rgba(6,182,212,0.14)',
+            background: 'rgba(46,213,115,0.14)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Fingerprint size={32} color="#06b6d4" />
+            <ClipboardList size={32} color="#1c9b56" />
           </div>
           <div>
             <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              Kích hoạt VNeID
+              Báo cáo tiến độ công việc
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4 }}>
               Theo dõi - Báo cáo tiến độ thực hiện nhiệm vụ

@@ -1219,25 +1219,9 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="filter-profile">Hồ sơ Định danh ĐT</label>
-                    <select id="filter-profile" class="input-control" onchange="handleFilterChange()">
-                        <option value="">Tất cả</option>
-                        <option value="HS mức 2 được cấp">HS Mức 2 được cấp</option>
-                        <option value="HS mức 1 được cấp">HS Mức 1 được cấp</option>
-                    </select>
-                </div>
-                <div class="form-group">
                     <label for="filter-birthyear">Năm sinh</label>
                     <select id="filter-birthyear" class="input-control" onchange="handleFilterChange()">
                         <option value="">Tất cả các năm</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="filter-cccd-status">Trạng thái cấp CCCD</label>
-                    <select id="filter-cccd-status" class="input-control" onchange="handleFilterChange()">
-                        <option value="">Tất cả</option>
-                        <option value="Được cấp">Đã được cấp CCCD</option>
-                        <option value="Chưa được cấp">Chưa cấp/Khác</option>
                     </select>
                 </div>
             </div>
@@ -1263,14 +1247,12 @@
                 <table id="data-table">
                     <thead>
                         <tr>
-                            <th style="width: 60px;">STT</th>
-                            <th style="width: 140px;">Xã/Thị trấn</th>
                             <th style="width: 200px;">Họ tên</th>
                             <th style="width: 140px;">Số CCCD/ĐDCD</th>
                             <th style="width: 150px;">Ngày sinh & Tuổi</th>
                             <th style="width: 180px;">Tình trạng hồ sơ ĐDĐT</th>
                             <th>Địa chỉ thường trú</th>
-                            <th style="width: 140px;">Kích hoạt</th>
+                            <th style="width: 130px;">Báo cáo</th>
                         </tr>
                     </thead>
                     <tbody id="table-body">
@@ -1378,29 +1360,41 @@
     <div class="modal" id="activation-modal" onclick="closeModal('activation-modal')">
         <div class="modal-content" style="max-width: 500px;" onclick="event.stopPropagation()">
             <div class="modal-header" style="background: linear-gradient(to right, rgba(16, 185, 129, 0.08), rgba(6, 182, 212, 0.08));">
-                <h3>Xác nhận Kích hoạt Hồ sơ</h3>
+                <h3>Báo cáo kết quả kích hoạt</h3>
                 <button class="close-btn" onclick="closeModal('activation-modal')">&times;</button>
             </div>
             <div class="modal-body">
                 <div style="display: flex; flex-direction: column; gap: 16px;">
                     <div>
-                        <p style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600;">Cư dân thực hiện</p>
+                        <p style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600;">Công dân</p>
                         <h4 id="act-resident-name" style="font-size: 1.1rem; color: #fff; margin-top: 2px;">Nguyễn Văn A</h4>
                         <p id="act-resident-meta" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">CCCD: 017208008970 | An Bình</p>
                     </div>
 
                     <div class="form-group">
-                        <label>Cán bộ thực hiện kích hoạt</label>
+                        <label>Cán bộ thực hiện</label>
                         <div class="input-control" style="display:flex; align-items:center; background: rgba(6,182,212,0.08); border-color: rgba(6,182,212,0.3);">
                             <span id="act-officer-name" style="font-weight:600; color:#fff;">—</span>
                         </div>
-                        <!-- Quota status badge container -->
                         <div id="act-officer-quota-container"></div>
                     </div>
 
-                    <div style="display: flex; gap: 12px; margin-top: 10px; justify-content: flex-end;">
-                        <button class="action-btn" style="background: rgba(255,255,255,0.05); border-color: var(--border-color); color: var(--text-secondary);" onclick="closeModal('activation-modal')">Hủy</button>
-                        <button class="action-btn" id="act-confirm-btn" style="background: var(--accent-emerald); border-color: var(--accent-emerald);" onclick="confirmActivation()">Xác nhận kích hoạt</button>
+                    <!-- Chế độ chọn: thành công / báo lỗi -->
+                    <div id="act-mode-choose" style="display: flex; gap: 12px; margin-top: 6px;">
+                        <button class="action-btn" id="act-confirm-btn" style="flex:1; background: var(--accent-emerald); border-color: var(--accent-emerald);" onclick="confirmActivation()">✓ Kích hoạt thành công</button>
+                        <button class="action-btn" style="flex:1; background: rgba(244,63,94,0.15); border-color: rgba(244,63,94,0.4); color: var(--accent-rose);" onclick="showIssueForm()">⚠ Báo lỗi</button>
+                    </div>
+
+                    <!-- Chế độ báo lỗi -->
+                    <div id="act-mode-issue" style="display: none; flex-direction: column; gap: 10px;">
+                        <div class="form-group" style="margin:0;">
+                            <label for="act-issue-text">Nội dung lỗi gặp phải</label>
+                            <textarea id="act-issue-text" class="input-control" rows="4" style="resize:vertical; font-family: var(--font-main);" placeholder='VD: TK mức 1 nhưng hệ thống báo "Bạn đã kích hoạt"'></textarea>
+                        </div>
+                        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                            <button class="action-btn" style="background: rgba(255,255,255,0.05); border-color: var(--border-color); color: var(--text-secondary);" onclick="hideIssueForm()">Quay lại</button>
+                            <button class="action-btn" id="act-issue-submit-btn" style="background: var(--accent-rose); border-color: var(--accent-rose);" onclick="submitIssue()">Gửi báo lỗi</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1502,6 +1496,14 @@
         // Initialize Application
         window.addEventListener('DOMContentLoaded', async () => {
             if (typeof RESIDENT_DATA === 'undefined') {
+                document.body.innerHTML = `
+                    <main style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#080c14;color:#f8fafc;font-family:system-ui,-apple-system,'Segoe UI',sans-serif">
+                        <section style="max-width:520px;text-align:center;background:#0f172a;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.35)">
+                            <h1 style="font-size:1.3rem;margin:0 0 10px">Không tải được dữ liệu cư dân</h1>
+                            <p style="color:#94a3b8;line-height:1.55;margin:0 0 20px">Kết nối có thể bị gián đoạn hoặc thiết bị chưa tải xong tệp dữ liệu. Hãy kiểm tra mạng rồi thử lại.</p>
+                            <button onclick="window.location.reload()" style="border:0;border-radius:10px;padding:12px 18px;background:#06b6d4;color:#082f49;font-weight:800;cursor:pointer">Tải lại dữ liệu</button>
+                        </section>
+                    </main>`;
                 return;
             }
 
@@ -1626,9 +1628,7 @@
         function handleFilterChange() {
             const query = document.getElementById('search-input').value.toUpperCase().trim();
             const commune = document.getElementById('filter-commune').value;
-            const profile = document.getElementById('filter-profile').value;
             const birthyear = document.getElementById('filter-birthyear').value;
-            const cccdStatus = document.getElementById('filter-cccd-status').value;
 
             const cleanQuery = query.replace(/[-.\s*]+/g, '');
 
@@ -1641,12 +1641,6 @@
                 }
 
                 const matchCommune = commune === "" ? true : getVal(row, 'Đơn vị') === commune;
-                
-                let matchProfile = true;
-                if (profile) {
-                    const currentProfile = getVal(row, 'Tình trạng hồ sơ ĐDĐT');
-                    matchProfile = currentProfile.includes(profile);
-                }
 
                 let matchBirthyear = true;
                 if (birthyear) {
@@ -1655,14 +1649,7 @@
                     matchBirthyear = ageInfo ? ageInfo.year.toString() === birthyear : false;
                 }
 
-                let matchCCCD = true;
-                if (cccdStatus === 'Được cấp') {
-                    matchCCCD = getVal(row, 'Tình trạng cấp CCCD') === 'Được cấp';
-                } else if (cccdStatus === 'Chưa được cấp') {
-                    matchCCCD = getVal(row, 'Tình trạng cấp CCCD') !== 'Được cấp';
-                }
-
-                return matchQuery && matchCommune && matchProfile && matchBirthyear && matchCCCD;
+                return matchQuery && matchCommune && matchBirthyear;
             });
 
             currentPage = 1;
@@ -1676,7 +1663,7 @@
             document.getElementById('record-count').innerText = totalRecords.toLocaleString() + ' kết quả';
 
             if (totalRecords === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 50px;">Không tìm thấy kết quả</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 50px;">Không tìm thấy kết quả</td></tr>';
                 updatePaginationControls(0);
                 return;
             }
@@ -1713,16 +1700,13 @@
                 let actionButtonHtml = '';
 
                 if (isLocalActivated) {
-                    const log = ACTIVATION_LOGS[cleanCccd];
-                    actionButtonHtml = `<button class="action-btn activated" onclick="event.stopPropagation()">Đã kích hoạt</button>`;
+                    actionButtonHtml = `<button class="action-btn activated" onclick="event.stopPropagation(); startActivationByIndex(${globalIndex})">Đã báo cáo</button>`;
                 } else {
-                    actionButtonHtml = `<button class="action-btn" onclick="event.stopPropagation(); startActivationByIndex(${globalIndex})">Kích hoạt</button>`;
+                    actionButtonHtml = `<button class="action-btn" onclick="event.stopPropagation(); startActivationByIndex(${globalIndex})">Báo cáo</button>`;
                 }
 
                 rowsHtml += `
                     <tr onclick="showDetailsByIndex(${globalIndex})">
-                        <td style="color: var(--text-muted); font-weight: 500;">${globalIndex + 1}</td>
-                        <td>${getVal(row, 'Đơn vị')}</td>
                         <td style="font-weight: 600; color: #fff;">${getVal(row, 'Họ tên')}</td>
                         <td style="font-family: monospace;">${cccdHtml}</td>
                         <td>${dob} ${ageStr}</td>
@@ -1859,13 +1843,60 @@
         }
 
         // Activations logic
+        let pendingActName = '';
         function startActivation(cccd, name, commune) {
             pendingActCccd = cccd;
+            pendingActName = name;
             document.getElementById('act-resident-name').innerText = name;
             document.getElementById('act-resident-meta').innerText = `CCCD: ${cccd} | Xã/Thị trấn: ${commune}`;
             document.getElementById('act-officer-name').innerText = CURRENT_OFFICER ? CURRENT_OFFICER.name : '—';
             updateOfficerQuotaInfo();
+            // Reset về chế độ chọn (ẩn form báo lỗi)
+            hideIssueForm();
+            document.getElementById('act-issue-text').value = '';
             document.getElementById('activation-modal').classList.add('active');
+        }
+
+        function showIssueForm() {
+            document.getElementById('act-mode-choose').style.display = 'none';
+            document.getElementById('act-mode-issue').style.display = 'flex';
+            document.getElementById('act-issue-text').focus();
+        }
+        function hideIssueForm() {
+            document.getElementById('act-mode-choose').style.display = 'flex';
+            document.getElementById('act-mode-issue').style.display = 'none';
+        }
+
+        async function submitIssue() {
+            if (!pendingActCccd) return;
+            const description = document.getElementById('act-issue-text').value.trim();
+            if (!description) { alert('Vui lòng nhập nội dung lỗi.'); return; }
+            const btn = document.getElementById('act-issue-submit-btn');
+            btn.disabled = true; btn.textContent = 'Đang gửi...';
+            try {
+                const res = await fetch('/api/vneid/issues', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cccd: pendingActCccd, residentName: pendingActName, description })
+                });
+                if (!res.ok) {
+                    if (res.status === 401) {
+                        alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                        window.location.reload();
+                        return;
+                    }
+                    const data = await res.json().catch(() => ({}));
+                    alert(data.error || 'Lỗi gửi báo lỗi, thử lại.');
+                    return;
+                }
+                closeModal('activation-modal');
+                pendingActCccd = null;
+                alert('Đã gửi báo lỗi. Cảm ơn đồng chí!');
+            } catch (_e) {
+                alert('Lỗi kết nối, thử lại.');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Gửi báo lỗi';
+            }
         }
 
         // Đếm số kích hoạt của cán bộ đang đăng nhập (tháng hiện tại)
@@ -1939,12 +1970,17 @@
                     alert(data.error || "Lỗi lưu kích hoạt, thử lại.");
                     return;
                 }
-                const { data } = await res.json();
-                // Cập nhật cache RAM
+                const response = await res.json();
+                const data = response.data;
+                // Luôn dùng cán bộ/timestamp do server trả về. Nếu CCCD đã được ghi trước đó,
+                // không chuyển thành tích sang người vừa bấm lại.
                 ACTIVATION_LOGS[pendingActCccd] = {
-                    officerName: officerName,
+                    officerName: data && data.officerName ? data.officerName : officerName,
                     timestamp: data && data.timestamp ? data.timestamp : new Date().toISOString()
                 };
+                if (response.alreadyActivated) {
+                    alert(`CCCD này đã được ghi nhận trước đó bởi ${ACTIVATION_LOGS[pendingActCccd].officerName}.`);
+                }
             } catch (_e) {
                 alert("Lỗi kết nối, thử lại.");
                 return;

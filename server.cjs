@@ -16,6 +16,7 @@ const configFile = path.join(DATA_DIR, 'config.json');
 const pendingChangesFile = path.join(DATA_DIR, 'pending-changes.json');
 const workProgressFile = path.join(DATA_DIR, 'work-progress-reports.json');
 const vneidActivationsFile = path.join(DATA_DIR, 'vneid-activations.json');
+const vneidIssuesFile = path.join(DATA_DIR, 'vneid-issues.json');
 
 const DEFAULT_CONFIG = {
   totalCaseTarget: 610,
@@ -47,7 +48,28 @@ const readConfig = () => {
 const writeConfig = (data) => fs.writeFileSync(configFile, JSON.stringify(data, null, 2));
 
 // ── VNeID: officer roster + badge auth ────────────────────────────────────────
-const VNEID_SECRET = process.env.VNEID_SECRET || 'dev-vneid-secret-change-me';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || Boolean(process.env.RAILWAY_ENVIRONMENT);
+// Ưu tiên biến môi trường; nếu không có, tự sinh secret mạnh và lưu bền trên Volume /data.
+// Nhờ vậy production vẫn an toàn mà không bắt buộc phải cấu hình biến tay.
+const vneidSecretFile = path.join(DATA_DIR, 'vneid-secret.txt');
+const resolveVneidSecret = () => {
+  if (process.env.VNEID_SECRET) return process.env.VNEID_SECRET;
+  try {
+    if (fs.existsSync(vneidSecretFile)) {
+      const saved = fs.readFileSync(vneidSecretFile, 'utf8').trim();
+      if (saved) return saved;
+    }
+  } catch { /* rơi xuống nhánh tạo mới */ }
+  const generated = crypto.randomBytes(48).toString('base64url');
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(vneidSecretFile, generated, { mode: 0o600 });
+  } catch (err) {
+    console.warn('VNeID: không lưu được secret ra đĩa, dùng secret tạm trong RAM —', err.message);
+  }
+  return generated;
+};
+const VNEID_SECRET = resolveVneidSecret();
 const VNEID_COOKIE = 'vneid_session';
 const VNEID_SESSION_DAYS = 30;
 
@@ -135,8 +157,46 @@ const readVneidActivations = () => {
   try { return JSON.parse(fs.readFileSync(vneidActivationsFile, 'utf8')); }
   catch { return []; }
 };
-const writeVneidActivations = (data) =>
-  fs.writeFileSync(vneidActivationsFile, JSON.stringify(data, null, 2));
+const writeVneidActivations = (data) => {
+  const tempFile = `${vneidActivationsFile}.${process.pid}.tmp`;
+  fs.writeFileSync(tempFile, JSON.stringify(data, null, 2));
+  fs.renameSync(tempFile, vneidActivationsFile);
+};
+// Xếp hàng thao tác read-modify-write để hai request đồng thời không ghi đè nhau.
+let vneidActivationQueue = Promise.resolve();
+const updateVneidActivations = (updater) => {
+  const operation = vneidActivationQueue.then(() => {
+    const current = readVneidActivations();
+    const result = updater(current);
+    if (result.changed) writeVneidActivations(result.data);
+    return result;
+  });
+  vneidActivationQueue = operation.catch(() => {});
+  return operation;
+};
+
+// Báo lỗi kích hoạt (VD: TK mức 1 nhưng hệ thống báo "Bạn đã kích hoạt")
+const readVneidIssues = () => {
+  if (!fs.existsSync(vneidIssuesFile)) return [];
+  try { return JSON.parse(fs.readFileSync(vneidIssuesFile, 'utf8')); }
+  catch { return []; }
+};
+const writeVneidIssues = (data) => {
+  const tempFile = `${vneidIssuesFile}.${process.pid}.tmp`;
+  fs.writeFileSync(tempFile, JSON.stringify(data, null, 2));
+  fs.renameSync(tempFile, vneidIssuesFile);
+};
+let vneidIssueQueue = Promise.resolve();
+const appendVneidIssue = (entry) => {
+  const operation = vneidIssueQueue.then(() => {
+    const current = readVneidIssues();
+    current.push(entry);
+    writeVneidIssues(current);
+    return entry;
+  });
+  vneidIssueQueue = operation.catch(() => {});
+  return operation;
+};
 
 app.use(compression());
 app.use(cors());
@@ -882,12 +942,12 @@ app.post('/api/vneid/login', (req, res) => {
   const exp = Date.now() + VNEID_SESSION_DAYS * 24 * 60 * 60 * 1000;
   const token = signSession({ n: officer.nameKey, exp });
   res.setHeader('Set-Cookie',
-    `${VNEID_COOKIE}=${encodeURIComponent(token)}; Path=/; Max-Age=${VNEID_SESSION_DAYS * 86400}; HttpOnly; SameSite=Lax`);
+    `${VNEID_COOKIE}=${encodeURIComponent(token)}; Path=/; Max-Age=${VNEID_SESSION_DAYS * 86400}; HttpOnly; SameSite=Lax${IS_PRODUCTION ? '; Secure' : ''}`);
   res.json({ name: officer.name, team: officer.team, group: officer.group, position: officer.position });
 });
 
 app.post('/api/vneid/logout', (_req, res) => {
-  res.setHeader('Set-Cookie', `${VNEID_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`);
+  res.setHeader('Set-Cookie', `${VNEID_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${IS_PRODUCTION ? '; Secure' : ''}`);
   res.json({ ok: true });
 });
 
@@ -906,25 +966,67 @@ app.get('/api/vneid/activations', (req, res) => {
   res.json({ month, activations: all.filter((a) => a.month === month) });
 });
 
-app.post('/api/vneid/activations', (req, res) => {
+app.post('/api/vneid/activations', async (req, res) => {
   const officer = currentOfficer(req);
   if (!officer) return res.status(401).json({ error: 'Chưa đăng nhập' });
   const cccd = String(req.body?.cccd || '').replace(/\D/g, '');
-  if (!cccd) return res.status(400).json({ error: 'Thiếu số CCCD' });
+  if (!/^\d{12}$/.test(cccd)) return res.status(400).json({ error: 'Số CCCD phải gồm 12 chữ số' });
 
   const month = monthKey();
-  const all = readVneidActivations();
-  // Idempotent theo cccd trong cùng tháng — ghi đè bản ghi cũ nếu có
-  const filtered = all.filter((a) => !(a.cccd === cccd && a.month === month));
+  try {
+    const result = await updateVneidActivations((all) => {
+      const existing = all.find((a) => a.cccd === cccd && a.month === month);
+      if (existing) return { changed: false, data: all, entry: existing, created: false };
+
+      const entry = {
+        cccd,
+        officerName: officer.name,   // lấy từ cookie, không tin client
+        month,
+        timestamp: new Date().toISOString(),
+      };
+      return { changed: true, data: [...all, entry], entry, created: true };
+    });
+    res.status(result.created ? 201 : 200).json({
+      ok: true,
+      alreadyActivated: !result.created,
+      data: result.entry,
+    });
+  } catch (err) {
+    console.error('VNeID activation write failed:', err);
+    res.status(500).json({ error: 'Không lưu được dữ liệu kích hoạt' });
+  }
+});
+
+// Báo lỗi kích hoạt cho 1 công dân (VD: TK mức 1 nhưng hệ thống báo "Bạn đã kích hoạt")
+app.get('/api/vneid/issues', (req, res) => {
+  if (!currentOfficer(req)) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  res.json({ issues: readVneidIssues() });
+});
+
+app.post('/api/vneid/issues', async (req, res) => {
+  const officer = currentOfficer(req);
+  if (!officer) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  const cccd = String(req.body?.cccd || '').replace(/\D/g, '');
+  if (!/^\d{12}$/.test(cccd)) return res.status(400).json({ error: 'Số CCCD phải gồm 12 chữ số' });
+  const description = String(req.body?.description || '').trim().slice(0, 2000);
+  if (!description) return res.status(400).json({ error: 'Vui lòng nhập nội dung lỗi' });
+
   const entry = {
+    id: `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
     cccd,
+    residentName: String(req.body?.residentName || '').trim().slice(0, 200),
+    description,
     officerName: officer.name,   // lấy từ cookie, không tin client
-    month,
+    month: monthKey(),
     timestamp: new Date().toISOString(),
   };
-  filtered.push(entry);
-  writeVneidActivations(filtered);
-  res.status(201).json({ ok: true, data: entry });
+  try {
+    await appendVneidIssue(entry);
+    res.status(201).json({ ok: true, data: entry });
+  } catch (err) {
+    console.error('VNeID issue write failed:', err);
+    res.status(500).json({ error: 'Không lưu được báo lỗi' });
+  }
 });
 
 // ── VNeID gate: chặn /vneid và /vneid/* (gồm data.js) khi chưa đăng nhập ────────
@@ -964,8 +1066,7 @@ const vneidGateHtml = () => `<!DOCTYPE html>
     <label for="name">Họ tên đầy đủ</label>
     <input id="name" name="name" type="text" autocomplete="off" placeholder="VD: Trần Hà Linh" required>
     <label for="badge">Số hiệu</label>
-    <input id="badge" name="badge" type="text" autocomplete="off" inputmode="numeric" placeholder="VD: 321-393 hoặc 321393" required>
-    <div class="hint">Nhập đúng họ tên và số hiệu được cấp.</div>
+    <input id="badge" name="badge" type="text" autocomplete="off" inputmode="numeric" required>
     <button type="submit" id="submit-btn">Truy cập</button>
     <div class="err" id="err"></div>
   </form>
