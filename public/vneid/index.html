@@ -591,10 +591,14 @@
             height: 320px;
         }
 
+        .chart-box-tall {
+            height: 520px;
+        }
+
         /* Dashboard Table */
         .summary-table-container {
             flex-grow: 1;
-            overflow-y: auto;
+            overflow: auto;
             max-height: 450px;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
@@ -602,6 +606,7 @@
 
         .summary-table {
             width: 100%;
+            min-width: 460px;
             border-collapse: collapse;
         }
 
@@ -1081,10 +1086,22 @@
             }
             .chart-box {
                 padding: 12px;
-                min-height: 320px;
+                min-height: 300px;
+            }
+            .chart-box-tall {
+                height: auto;
             }
             .chart-container {
                 height: 260px;
+            }
+            .summary-table-container {
+                max-height: 340px;
+            }
+            .summary-table th,
+            .summary-table td {
+                padding: 8px 10px;
+                font-size: 0.8rem;
+                white-space: nowrap;
             }
             .modal-content {
                 border-radius: var(--radius-md);
@@ -1278,7 +1295,7 @@
         <div id="tab-dashboard" class="content-panel">
             <div class="dashboard-panel">
                 <!-- Communal Summary Table ordered by M2 backlog -->
-                <div class="chart-box" style="height: 520px;">
+                <div class="chart-box chart-box-tall">
                     <h3>Bảng theo dõi tồn đọng hồ sơ Mức 2 (chưa kích hoạt)</h3>
                     <div class="summary-table-container">
                         <table class="summary-table">
@@ -1299,7 +1316,7 @@
                 </div>
 
                 <!-- Commune backlog Chart -->
-                <div class="chart-box" style="height: 520px;">
+                <div class="chart-box chart-box-tall">
                     <h3>Xếp hạng 15 xã có số lượng tồn đọng Mức 2 lớn nhất</h3>
                     <div class="chart-container">
                         <canvas id="chart-backlog-communes"></canvas>
