@@ -4,3 +4,5 @@ dist/
 *.local
 .local-*.log
 work-progress-reports.json
+vneid-activations.json
+_testdata/

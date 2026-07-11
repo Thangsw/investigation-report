@@ -1,0 +1,458 @@
+[
+  {
+    "name": "Thượng tá Đinh Văn Nghĩa",
+    "badge": "321-712",
+    "badgeDigits": "321712",
+    "position": "Lãnh đạo",
+    "team": "Lãnh đạo",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thượng tá Đinh Mai Anh",
+    "badge": "321-393",
+    "badgeDigits": "321393",
+    "position": "Lãnh đạo",
+    "team": "Lãnh đạo",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Trung tá Bùi Thị Thanh Hà",
+    "badge": "321-377",
+    "badgeDigits": "321377",
+    "position": "Phó Đội trưởng",
+    "team": "Đội 1",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Trung tá Bùi Thế Việt",
+    "badge": "321-830",
+    "badgeDigits": "321830",
+    "position": "Cán bộ",
+    "team": "Đội 1",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Trung tá Mạc Trung Kiên",
+    "badge": "321-681",
+    "badgeDigits": "321681",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Trung tá Quách Văn Thành",
+    "badge": "322-165",
+    "badgeDigits": "322165",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Trung tá Đặng Việt Hùng",
+    "badge": "324-054",
+    "badgeDigits": "324054",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Trung tá Đặng Thị Vân Anh",
+    "badge": "321-808",
+    "badgeDigits": "321808",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Trung tá Lê Văn Thắng",
+    "badge": "321-925",
+    "badgeDigits": "321925",
+    "position": "Phó Đội trưởng",
+    "team": "Đội 3",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Trung tá Đinh Thanh Hòa",
+    "badge": "321-172",
+    "badgeDigits": "321172",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Trung tá Nguyễn Trọng Hậu",
+    "badge": "321-839",
+    "badgeDigits": "321839",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Trung tá Bùi Văn Phong",
+    "badge": "324-272",
+    "badgeDigits": "324272",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Thiếu tá Nguyễn Phương Thảo",
+    "badge": "322-398",
+    "badgeDigits": "322398",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thiếu tá Nguyễn Hà Giang",
+    "badge": "321-846",
+    "badgeDigits": "321846",
+    "position": "Phó Đội trưởng",
+    "team": "Đội 2",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thiếu tá Nguyễn Hiếu Thảo",
+    "badge": "322-009",
+    "badgeDigits": "322009",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thiếu tá Nguyễn Quốc Thắng",
+    "badge": "324-529",
+    "badgeDigits": "324529",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thiếu tá Vũ Thanh Hải",
+    "badge": "322-034",
+    "badgeDigits": "322034",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thiếu tá Nguyễn Đắc Duy",
+    "badge": "324-510",
+    "badgeDigits": "324510",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thiếu tá Bùi Mạnh Cường",
+    "badge": "322-271",
+    "badgeDigits": "322271",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thiếu tá Nguyễn Trọng Đức",
+    "badge": "322-789",
+    "badgeDigits": "322789",
+    "position": "Phó Đội trưởng",
+    "team": "Đội 4",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thiếu tá Bùi Thị Quế",
+    "badge": "322-140",
+    "badgeDigits": "322140",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thiếu tá Nguyễn Tiến Hải",
+    "badge": "322-468",
+    "badgeDigits": "322468",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thiếu tá Vũ Văn Tuấn",
+    "badge": "322-585",
+    "badgeDigits": "322585",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thiếu tá Nguyễn Tiến Đông",
+    "badge": "323-032",
+    "badgeDigits": "323032",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Thiếu tá Nguyễn Khắc Hòa",
+    "badge": "322-562",
+    "badgeDigits": "322562",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Thiếu tá Nguyễn Mạnh Cường",
+    "badge": "322-510",
+    "badgeDigits": "322510",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Thiếu tá Nguyễn Thanh Hằng",
+    "badge": "322-246",
+    "badgeDigits": "322246",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Đỗ Đức Thắng",
+    "badge": "647-631",
+    "badgeDigits": "647631",
+    "position": "Cán bộ",
+    "team": "Đội 1",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Trần Đức Dũng",
+    "badge": "320-910",
+    "badgeDigits": "320910",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Lương Tiến Hưng",
+    "badge": "322-710",
+    "badgeDigits": "322710",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Trần Đình Đức",
+    "badge": "324 - 787",
+    "badgeDigits": "324787",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Vũ Đức Lộc",
+    "badge": "322-886",
+    "badgeDigits": "322886",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Nguyễn Thanh Tùng",
+    "badge": "322 - 598",
+    "badgeDigits": "322598",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Mai Tùng Dương",
+    "badge": "322-633",
+    "badgeDigits": "322633",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Bùi Mạnh Dũng",
+    "badge": "323-044",
+    "badgeDigits": "323044",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Chu Văn Phương",
+    "badge": "322-657",
+    "badgeDigits": "322657",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Bùi Thanh Tuấn",
+    "badge": "322-882",
+    "badgeDigits": "322882",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Đặng Tiến Mạnh",
+    "badge": "323-192",
+    "badgeDigits": "323192",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Phương Huy Hoàng",
+    "badge": "324-954",
+    "badgeDigits": "324954",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Bùi Mạnh Linh",
+    "badge": "322-790",
+    "badgeDigits": "322790",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Đại úy Nguyễn Quang Ninh",
+    "badge": "324-883",
+    "badgeDigits": "324883",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Đại úy Dư Công Thanh",
+    "badge": "320-386",
+    "badgeDigits": "320386",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Đại úy Nguyễn Đức Cao",
+    "badge": "322-646",
+    "badgeDigits": "322646",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Đại úy Nguyễn Trung Hiếu",
+    "badge": "322-601",
+    "badgeDigits": "322601",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Đại úy Nguyễn Văn Hùng",
+    "badge": "322-667",
+    "badgeDigits": "322667",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Đại úy Nguyễn Mạnh Hiển",
+    "badge": "322-300",
+    "badgeDigits": "322300",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Đại úy Hoàng Hải Huy",
+    "badge": "323-980",
+    "badgeDigits": "323980",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Đại úy Nguyễn Xuân Úy",
+    "badge": "324-825",
+    "badgeDigits": "324825",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Đại úy Nguyễn Văn Phước",
+    "badge": "322-677",
+    "badgeDigits": "322677",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Đại úy Bàn Văn Chiến",
+    "badge": "323-164",
+    "badgeDigits": "323164",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Thượng úy Bùi Thị Thu Thủy",
+    "badge": "320-720",
+    "badgeDigits": "320720",
+    "position": "Cán bộ",
+    "team": "Đội 1",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thượng úy Dương Công Thành",
+    "badge": "323-772",
+    "badgeDigits": "323772",
+    "position": "Cán bộ",
+    "team": "Đội 3",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thượng úy Nguyễn Duy Cảnh",
+    "badge": "321-080",
+    "badgeDigits": "321080",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thượng úy Nguyễn Tiến Mạnh",
+    "badge": "322-966",
+    "badgeDigits": "322966",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Thượng úy Hoàng Đức Tho",
+    "badge": "322-732",
+    "badgeDigits": "322732",
+    "position": "Cán bộ",
+    "team": "Đội 4",
+    "group": "Hòa Bình"
+  },
+  {
+    "name": "Trung úy Bùi Hữu Đức",
+    "badge": "321-507",
+    "badgeDigits": "321507",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Lạc Thủy"
+  },
+  {
+    "name": "Thiếu úy Nông Việt Hùng",
+    "badge": "323-057",
+    "badgeDigits": "323057",
+    "position": "Cán bộ",
+    "team": "Đội 2",
+    "group": "Lạc Thủy"
+  }
+]

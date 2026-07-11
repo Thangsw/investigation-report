@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const XLSX = require('xlsx');
@@ -13,6 +15,7 @@ const investigatorsFile = path.join(DATA_DIR, 'investigators.json');
 const configFile = path.join(DATA_DIR, 'config.json');
 const pendingChangesFile = path.join(DATA_DIR, 'pending-changes.json');
 const workProgressFile = path.join(DATA_DIR, 'work-progress-reports.json');
+const vneidActivationsFile = path.join(DATA_DIR, 'vneid-activations.json');
 
 const DEFAULT_CONFIG = {
   totalCaseTarget: 610,
@@ -43,6 +46,99 @@ const readConfig = () => {
 };
 const writeConfig = (data) => fs.writeFileSync(configFile, JSON.stringify(data, null, 2));
 
+// ── VNeID: officer roster + badge auth ────────────────────────────────────────
+const VNEID_SECRET = process.env.VNEID_SECRET || 'dev-vneid-secret-change-me';
+const VNEID_COOKIE = 'vneid_session';
+const VNEID_SESSION_DAYS = 30;
+
+// Bỏ dấu tiếng Việt + cấp bậc, lowercase, gộp khoảng trắng → khoá so khớp tên
+const VNEID_RANKS = ['thượng tá', 'trung tá', 'thiếu tá', 'đại tá', 'đại úy', 'thượng úy', 'trung úy', 'thiếu úy'];
+const stripDiacritics = (s) =>
+  String(s || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D');
+const normOfficerName = (raw) => {
+  let s = String(raw || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  for (const r of VNEID_RANKS) {
+    if (s.startsWith(r + ' ')) { s = s.slice(r.length).trim(); break; }
+  }
+  return stripDiacritics(s);
+};
+const badgeDigits = (raw) => String(raw || '').replace(/\D/g, '');
+
+// Nạp danh sách cán bộ + số hiệu 1 lần lúc khởi động
+let VNEID_OFFICERS = [];
+const OFFICERS_BADGE_FILE = path.join(__dirname, 'officers-badges.json');
+try {
+  const rawList = JSON.parse(fs.readFileSync(OFFICERS_BADGE_FILE, 'utf8'));
+  VNEID_OFFICERS = rawList.map((o) => ({
+    name: o.name,
+    team: o.team || '',
+    group: o.group || '',
+    position: o.position || '',
+    nameKey: normOfficerName(o.name),
+    badgeKey: badgeDigits(o.badgeDigits || o.badge),
+  }));
+  console.log(`VNeID: loaded ${VNEID_OFFICERS.length} officers`);
+} catch (err) {
+  console.error('VNeID: cannot load officers-badges.json —', err.message);
+}
+const findOfficer = (name, badge) => {
+  const nk = normOfficerName(name);
+  const bk = badgeDigits(badge);
+  if (!nk || !bk) return null;
+  return VNEID_OFFICERS.find((o) => o.nameKey === nk && o.badgeKey === bk) || null;
+};
+
+// Cookie phiên ký HMAC: base64(payload).hmac  — payload = {n: nameKey, exp}
+const signSession = (payload) => {
+  const body = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+  const mac = crypto.createHmac('sha256', VNEID_SECRET).update(body).digest('base64url');
+  return `${body}.${mac}`;
+};
+const verifySession = (token) => {
+  if (!token || typeof token !== 'string' || !token.includes('.')) return null;
+  const [body, mac] = token.split('.');
+  const expected = crypto.createHmac('sha256', VNEID_SECRET).update(body).digest('base64url');
+  const macBuf = Buffer.from(mac || '');
+  const expBuf = Buffer.from(expected);
+  if (macBuf.length !== expBuf.length || !crypto.timingSafeEqual(macBuf, expBuf)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (!payload.exp || Date.now() > payload.exp) return null;
+    return payload;
+  } catch { return null; }
+};
+const parseCookies = (req) => {
+  const out = {};
+  const raw = req.headers.cookie;
+  if (!raw) return out;
+  raw.split(';').forEach((part) => {
+    const idx = part.indexOf('=');
+    if (idx > -1) out[part.slice(0, idx).trim()] = decodeURIComponent(part.slice(idx + 1).trim());
+  });
+  return out;
+};
+const currentOfficer = (req) => {
+  const payload = verifySession(parseCookies(req)[VNEID_COOKIE]);
+  if (!payload) return null;
+  return VNEID_OFFICERS.find((o) => o.nameKey === payload.n) || null;
+};
+
+const monthKey = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+const readVneidActivations = () => {
+  if (!fs.existsSync(vneidActivationsFile)) return [];
+  try { return JSON.parse(fs.readFileSync(vneidActivationsFile, 'utf8')); }
+  catch { return []; }
+};
+const writeVneidActivations = (data) =>
+  fs.writeFileSync(vneidActivationsFile, JSON.stringify(data, null, 2));
+
+app.use(compression());
 app.use(cors());
 app.use(express.json());
 
@@ -774,6 +870,132 @@ app.get('/api/work-progress/export', (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Lỗi xuất Excel báo cáo tiến độ' });
   }
+});
+
+// ── VNeID API: login + activations ────────────────────────────────────────────
+app.post('/api/vneid/login', (req, res) => {
+  const { name, badge } = req.body || {};
+  const officer = findOfficer(name, badge);
+  if (!officer) {
+    return res.status(401).json({ error: 'Sai họ tên hoặc số hiệu' });
+  }
+  const exp = Date.now() + VNEID_SESSION_DAYS * 24 * 60 * 60 * 1000;
+  const token = signSession({ n: officer.nameKey, exp });
+  res.setHeader('Set-Cookie',
+    `${VNEID_COOKIE}=${encodeURIComponent(token)}; Path=/; Max-Age=${VNEID_SESSION_DAYS * 86400}; HttpOnly; SameSite=Lax`);
+  res.json({ name: officer.name, team: officer.team, group: officer.group, position: officer.position });
+});
+
+app.post('/api/vneid/logout', (_req, res) => {
+  res.setHeader('Set-Cookie', `${VNEID_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`);
+  res.json({ ok: true });
+});
+
+// Ai đang đăng nhập (client dùng để hiện tên + tiến độ của chính mình)
+app.get('/api/vneid/me', (req, res) => {
+  const officer = currentOfficer(req);
+  if (!officer) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  res.json({ name: officer.name, team: officer.team, group: officer.group, position: officer.position });
+});
+
+// Log kích hoạt — chỉ tính theo tháng (mặc định tháng hiện tại). "Reset mùng 1" = lọc theo tháng.
+app.get('/api/vneid/activations', (req, res) => {
+  if (!currentOfficer(req)) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : monthKey();
+  const all = readVneidActivations();
+  res.json({ month, activations: all.filter((a) => a.month === month) });
+});
+
+app.post('/api/vneid/activations', (req, res) => {
+  const officer = currentOfficer(req);
+  if (!officer) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  const cccd = String(req.body?.cccd || '').replace(/\D/g, '');
+  if (!cccd) return res.status(400).json({ error: 'Thiếu số CCCD' });
+
+  const month = monthKey();
+  const all = readVneidActivations();
+  // Idempotent theo cccd trong cùng tháng — ghi đè bản ghi cũ nếu có
+  const filtered = all.filter((a) => !(a.cccd === cccd && a.month === month));
+  const entry = {
+    cccd,
+    officerName: officer.name,   // lấy từ cookie, không tin client
+    month,
+    timestamp: new Date().toISOString(),
+  };
+  filtered.push(entry);
+  writeVneidActivations(filtered);
+  res.status(201).json({ ok: true, data: entry });
+});
+
+// ── VNeID gate: chặn /vneid và /vneid/* (gồm data.js) khi chưa đăng nhập ────────
+const vneidGateHtml = () => `<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đăng nhập — Kích hoạt VNeID</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;
+    font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
+    background:#080c14;background-image:radial-gradient(at 10% 15%,rgba(6,182,212,.14),transparent 50%),radial-gradient(at 90% 85%,rgba(79,70,229,.12),transparent 50%);
+    color:#f8fafc;padding:20px}
+  .card{width:100%;max-width:400px;background:rgba(15,23,42,.85);backdrop-filter:blur(16px);
+    border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:34px 28px;
+    box-shadow:0 20px 60px rgba(0,0,0,.45)}
+  .logo{width:56px;height:56px;border-radius:14px;margin:0 auto 18px;
+    background:linear-gradient(135deg,#06b6d4,#4f46e5);display:flex;align-items:center;justify-content:center}
+  .logo svg{width:30px;height:30px;stroke:#fff;fill:none;stroke-width:2}
+  h1{font-size:1.25rem;font-weight:800;text-align:center;margin-bottom:6px}
+  p.sub{font-size:.85rem;color:#94a3b8;text-align:center;margin-bottom:24px}
+  label{display:block;font-size:.82rem;font-weight:600;color:#cbd5e1;margin:14px 0 6px}
+  input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.05);color:#f8fafc;font-size:1rem;outline:none}
+  input:focus{border-color:#06b6d4}
+  .hint{font-size:.75rem;color:#64748b;margin-top:4px}
+  button{width:100%;margin-top:22px;padding:13px;border:none;border-radius:10px;cursor:pointer;
+    background:linear-gradient(135deg,#06b6d4,#4f46e5);color:#fff;font-size:1rem;font-weight:700}
+  button:disabled{opacity:.6;cursor:default}
+  .err{margin-top:14px;font-size:.85rem;color:#f43f5e;text-align:center;min-height:1.2em}
+</style></head>
+<body>
+  <form class="card" id="gate-form" autocomplete="off">
+    <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4z"/></svg></div>
+    <h1>Kích hoạt VNeID</h1>
+    <p class="sub">Nhập thông tin cán bộ để truy cập</p>
+    <label for="name">Họ tên đầy đủ</label>
+    <input id="name" name="name" type="text" autocomplete="off" placeholder="VD: Trần Hà Linh" required>
+    <label for="badge">Số hiệu</label>
+    <input id="badge" name="badge" type="text" autocomplete="off" inputmode="numeric" placeholder="VD: 321-393 hoặc 321393" required>
+    <div class="hint">Nhập đúng họ tên và số hiệu được cấp.</div>
+    <button type="submit" id="submit-btn">Truy cập</button>
+    <div class="err" id="err"></div>
+  </form>
+  <script>
+    const form = document.getElementById('gate-form');
+    const btn = document.getElementById('submit-btn');
+    const err = document.getElementById('err');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.textContent = '';
+      btn.disabled = true; btn.textContent = 'Đang kiểm tra...';
+      try {
+        const res = await fetch('/api/vneid/login', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ name: document.getElementById('name').value, badge: document.getElementById('badge').value })
+        });
+        if (res.ok) { window.location.reload(); return; }
+        const data = await res.json().catch(() => ({}));
+        err.textContent = data.error || 'Đăng nhập thất bại';
+      } catch (_e) {
+        err.textContent = 'Lỗi kết nối, thử lại';
+      }
+      btn.disabled = false; btn.textContent = 'Truy cập';
+    });
+  </script>
+</body></html>`;
+
+app.use('/vneid', (req, res, next) => {
+  if (currentOfficer(req)) return next();
+  res.status(401).type('html').send(vneidGateHtml());
 });
 
 if (fs.existsSync(distPath)) {

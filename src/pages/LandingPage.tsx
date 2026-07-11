@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, Shield, FileSearch } from 'lucide-react';
+import { ClipboardList, Shield, FileSearch, Fingerprint } from 'lucide-react';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -185,6 +185,55 @@ export default function LandingPage() {
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4 }}>
               Quản lý hồ sơ điều tra cơ bản
+            </div>
+          </div>
+        </button>
+
+        {/* Kích hoạt VNeID */}
+        <button
+          onClick={() => window.location.href = '/vneid/index.html'}
+          style={{
+            flex: '1 1 260px',
+            maxWidth: 320,
+            minHeight: 200,
+            background: 'linear-gradient(135deg, rgba(6,182,212,0.18) 0%, rgba(6,182,212,0.06) 100%)',
+            border: '2px solid rgba(6,182,212,0.42)',
+            borderRadius: 18,
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 16,
+            padding: 32,
+            transition: 'transform 0.15s, border-color 0.15s, box-shadow 0.15s',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-4px)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = '#06b6d4';
+            (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 32px rgba(6,182,212,0.22)';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.transform = '';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(6,182,212,0.42)';
+            (e.currentTarget as HTMLButtonElement).style.boxShadow = '';
+          }}
+        >
+          <div style={{
+            width: 64, height: 64, borderRadius: '50%',
+            background: 'rgba(6,182,212,0.14)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Fingerprint size={32} color="#06b6d4" />
+          </div>
+          <div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+              Kích hoạt VNeID
+            </div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 4 }}>
+              Theo dõi - Báo cáo tiến độ thực hiện nhiệm vụ
             </div>
           </div>
         </button>
