@@ -43,7 +43,7 @@
 
         body {
             background-color: var(--bg-color);
-            background-image: 
+            background-image:
                 radial-gradient(at 10% 15%, rgba(79, 70, 229, 0.12) 0px, transparent 50%),
                 radial-gradient(at 90% 85%, rgba(6, 182, 212, 0.1) 0px, transparent 50%);
             background-attachment: fixed;
@@ -52,11 +52,17 @@
             line-height: 1.5;
             padding: 24px;
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         .container {
             max-width: 1550px;
             margin: 0 auto;
+        }
+
+        .dashboard-panel,
+        .content-panel {
+            min-width: 0;
         }
 
         /* Header Style */
@@ -568,6 +574,7 @@
             border-radius: var(--radius-lg);
             padding: 20px;
             min-height: 400px;
+            min-width: 0;
             display: flex;
             flex-direction: column;
         }
@@ -598,7 +605,9 @@
         /* Dashboard Table */
         .summary-table-container {
             flex-grow: 1;
+            min-width: 0;
             overflow: auto;
+            -webkit-overflow-scrolling: touch;
             max-height: 450px;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
