@@ -898,6 +898,39 @@
             color: #f87171 !important;
         }
 
+        /* Admin accordion */
+        .admin-accordion {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .admin-accordion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            background: rgba(0,0,0,0.25);
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+        .admin-accordion-header:hover { background: rgba(255,255,255,0.04); }
+        .admin-accordion-header h3 {
+            font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin: 0;
+        }
+        .admin-accordion-arrow {
+            font-size: 0.75rem; color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+        .admin-accordion.open .admin-accordion-arrow { transform: rotate(180deg); }
+        .admin-accordion-body {
+            display: none;
+            padding: 16px 18px;
+            border-top: 1px solid var(--border-color);
+        }
+        .admin-accordion.open .admin-accordion-body { display: block; }
+
         /* Admin panel */
         .admin-panel { padding: 24px; }
         .admin-panel h2 { font-size: 1.1rem; font-weight: 700; color: #f87171; margin-bottom: 4px; }
@@ -1507,7 +1540,7 @@
         <div id="tab-admin" class="content-panel">
             <div class="admin-panel">
                 <h2>🛡 Quản trị hệ thống</h2>
-                <p style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:4px;">Chỉ hiển thị với tài khoản quản trị viên</p>
+                <p style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:16px;">Chỉ hiển thị với tài khoản quản trị viên</p>
 
                 <div class="admin-stats-grid" id="admin-summary-boxes">
                     <div class="admin-stat-box">
@@ -1524,43 +1557,66 @@
                     </div>
                 </div>
 
-                <!-- Mục 1: Thống kê số lần truy cập theo cán bộ -->
-                <div class="admin-section-title">Mục 1 — Thống kê số lần truy cập theo cán bộ</div>
-                <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
-                    <table class="admin-log-table" id="admin-stats-table">
-                        <thead><tr>
-                            <th>Cán bộ</th>
-                            <th>Đội</th>
-                            <th style="text-align:center;">Số lần</th>
-                            <th>Lần đầu</th>
-                            <th>Lần cuối</th>
-                            <th style="text-align:center;">Trạng thái</th>
-                        </tr></thead>
-                        <tbody id="admin-stats-body">
-                            <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:30px;">Đang tải...</td></tr>
-                        </tbody>
-                    </table>
+                <!-- Mục 1: Thống kê số lần truy cập -->
+                <div class="admin-accordion" id="acc-stats">
+                    <div class="admin-accordion-header" onclick="toggleAccordion('acc-stats')">
+                        <h3>Mục 1 — Thống kê số lần truy cập theo cán bộ</h3>
+                        <span class="admin-accordion-arrow">▼</span>
+                    </div>
+                    <div class="admin-accordion-body">
+                        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                            <table class="admin-log-table">
+                                <thead><tr>
+                                    <th>Cán bộ</th>
+                                    <th>Đội</th>
+                                    <th style="text-align:center;">Số lần</th>
+                                    <th>Lần đầu</th>
+                                    <th>Lần cuối</th>
+                                    <th style="text-align:center;">Trạng thái</th>
+                                </tr></thead>
+                                <tbody id="admin-stats-body">
+                                    <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:30px;">Đang tải...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Cán bộ chưa truy cập -->
-                <div class="admin-section-title" id="admin-never-title">Cán bộ chưa truy cập lần nào</div>
-                <div id="admin-never-list" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;"></div>
+                <!-- Mục 2: Cán bộ chưa truy cập -->
+                <div class="admin-accordion" id="acc-never">
+                    <div class="admin-accordion-header" onclick="toggleAccordion('acc-never')">
+                        <h3>Mục 2 — Cán bộ chưa truy cập lần nào</h3>
+                        <span class="admin-accordion-arrow">▼</span>
+                    </div>
+                    <div class="admin-accordion-body">
+                        <div id="admin-never-list" style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <span style="color:var(--text-muted); font-size:0.85rem;">Đang tải...</span>
+                        </div>
+                    </div>
+                </div>
 
-                <!-- Mục 2: Log chung toàn bộ lịch sử -->
-                <div class="admin-section-title">Mục 2 — Log chung toàn bộ lịch sử đăng nhập</div>
-                <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
-                    <table class="admin-log-table" id="admin-log-table">
-                        <thead><tr>
-                            <th>Thời gian</th>
-                            <th>Cán bộ</th>
-                            <th>Đội</th>
-                            <th>IP</th>
-                            <th>Thiết bị / Trình duyệt</th>
-                        </tr></thead>
-                        <tbody id="admin-log-body">
-                            <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:30px;">Đang tải...</td></tr>
-                        </tbody>
-                    </table>
+                <!-- Mục 3: Log chung toàn bộ lịch sử -->
+                <div class="admin-accordion" id="acc-log">
+                    <div class="admin-accordion-header" onclick="toggleAccordion('acc-log')">
+                        <h3>Mục 3 — Log chung toàn bộ lịch sử đăng nhập</h3>
+                        <span class="admin-accordion-arrow">▼</span>
+                    </div>
+                    <div class="admin-accordion-body">
+                        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                            <table class="admin-log-table">
+                                <thead><tr>
+                                    <th>Thời gian</th>
+                                    <th>Cán bộ</th>
+                                    <th>Đội</th>
+                                    <th>IP</th>
+                                    <th>Thiết bị / Trình duyệt</th>
+                                </tr></thead>
+                                <tbody id="admin-log-body">
+                                    <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:30px;">Đang tải...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1781,6 +1837,11 @@
             if (!iso) return '—';
             const d = new Date(iso);
             return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
+        }
+
+        function toggleAccordion(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('open');
         }
 
         let adminDataLoaded = false;
