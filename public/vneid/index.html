@@ -1203,26 +1203,6 @@
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-info">
-                    <h3>Hồ sơ Mức 2 tồn đọng</h3>
-                    <div class="stat-value" id="stat-m2-not-activated" style="color: var(--accent-rose);">0</div>
-                    <div class="stat-subtitle" id="stat-m2-pct">0% tổng số lượng</div>
-                </div>
-                <div class="stat-icon rose">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-info">
-                    <h3>Đã cấp thẻ CCCD</h3>
-                    <div class="stat-value" id="stat-cccd">0</div>
-                    <div class="stat-subtitle" id="stat-cccd-pct">0% tổng số lượng</div>
-                </div>
-                <div class="stat-icon cyan">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm6 12H8v-1.5c0-1.99 4-3 6-3s6 1.01 6 3V19zM9 9H5v2h4V9zm0 4H5v2h4v-2z"/></svg>
-                </div>
-            </div>
         </div>
 
         <!-- Alert if Chart.js fails -->
@@ -1801,7 +1781,6 @@
             }
 
             const personalFields = [
-                { label: 'Số Thứ Tự', val: getVal(row, 'STT') },
                 { label: 'Xã / Thị trấn', val: getVal(row, 'Đơn vị') },
                 { label: 'Số Định danh/CCCD', val: displayCccd },
                 { label: 'Ngày sinh & Tuổi', val: (dob || '-') + ageDetailStr },
@@ -1861,11 +1840,41 @@
             addSubtitle("Thông tin Tích hợp Giấy tờ");
             integrationFields.forEach(renderGroup);
 
+            // Footer nút Báo cáo
+            const footer = document.createElement('div');
+            footer.className = 'modal-dynamic-footer';
+            footer.style.cssText = 'padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px;';
+
+            const cccdForBtn = cleanCccd;
+            const nameForBtn = getVal(row, 'Họ tên');
+            const communeForBtn = getVal(row, 'Đơn vị');
+            const alreadyReported = !!ACTIVATION_LOGS[cccdForBtn];
+
+            const reportBtn = document.createElement('button');
+            reportBtn.className = 'action-btn' + (alreadyReported ? ' activated' : '');
+            reportBtn.style.cssText = alreadyReported
+                ? 'background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.4); color: var(--accent-emerald);'
+                : 'background: var(--primary);';
+            reportBtn.textContent = alreadyReported ? '✓ Đã báo cáo' : 'Báo cáo tình trạng kích hoạt';
+            if (!alreadyReported) {
+                reportBtn.onclick = () => {
+                    closeModal('details-modal');
+                    startActivation(cccdForBtn, nameForBtn, communeForBtn);
+                };
+            }
+
+            footer.appendChild(reportBtn);
+            modal.querySelector('.modal-content').appendChild(footer);
+
             modal.classList.add('active');
         }
 
         function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
+            const m = document.getElementById(modalId);
+            m.classList.remove('active');
+            // Clean up dynamically-appended footer (details modal)
+            const dynFooter = m.querySelector('.modal-dynamic-footer');
+            if (dynFooter) dynFooter.remove();
         }
 
         // Activations logic
