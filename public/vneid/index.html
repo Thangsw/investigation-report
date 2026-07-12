@@ -883,6 +883,66 @@
             }
         }
 
+        /* Admin tab */
+        .tab-btn-admin {
+            color: #f87171 !important;
+            border-color: rgba(248, 113, 113, 0.3) !important;
+        }
+        .tab-btn-admin:hover {
+            background: rgba(248, 113, 113, 0.08) !important;
+            border-color: rgba(248, 113, 113, 0.5) !important;
+        }
+        .tab-btn-admin.active {
+            background: rgba(248, 113, 113, 0.15) !important;
+            border-color: rgba(248, 113, 113, 0.5) !important;
+            color: #f87171 !important;
+        }
+
+        /* Admin panel */
+        .admin-panel { padding: 24px; }
+        .admin-panel h2 { font-size: 1.1rem; font-weight: 700; color: #f87171; margin-bottom: 4px; }
+        .admin-section-title {
+            font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.5px; color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px; margin: 24px 0 12px;
+        }
+        .admin-log-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        .admin-log-table th {
+            background: rgba(0,0,0,0.3); color: var(--text-secondary);
+            padding: 8px 12px; text-align: left; font-weight: 600;
+            border-bottom: 1px solid var(--border-color); white-space: nowrap;
+        }
+        .admin-log-table td {
+            padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.03);
+            vertical-align: middle;
+        }
+        .admin-log-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .admin-ua {
+            max-width: 180px; overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap; color: var(--text-muted); font-size: 0.75rem;
+        }
+        .admin-badge-accessed {
+            background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3);
+            color: var(--accent-emerald); padding: 2px 8px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 600; white-space: nowrap;
+        }
+        .admin-badge-never {
+            background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3);
+            color: #f87171; padding: 2px 8px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 600;
+        }
+        .admin-stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
+            gap: 12px; margin-bottom: 20px;
+        }
+        .admin-stat-box {
+            background: rgba(0,0,0,0.2); border: 1px solid var(--border-color);
+            border-radius: var(--radius-md); padding: 14px 16px;
+        }
+        .admin-stat-box .val { font-size: 1.6rem; font-weight: 700; }
+        .admin-stat-box .lbl { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
+
         /* Guide tab — amber/yellow accent */
         .tab-btn-guide {
             color: var(--accent-amber) !important;
@@ -1287,6 +1347,10 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
                     HD Kích hoạt
                 </button>
+                <button class="tab-btn tab-btn-admin" id="tab-btn-admin" onclick="switchTab('admin')" style="display:none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    Quản trị
+                </button>
             </div>
         </header>
 
@@ -1435,6 +1499,68 @@
                     <div class="chart-container">
                         <canvas id="chart-teams-bar"></canvas>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN TAB PANEL -->
+        <div id="tab-admin" class="content-panel">
+            <div class="admin-panel">
+                <h2>🛡 Quản trị hệ thống</h2>
+                <p style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:4px;">Chỉ hiển thị với tài khoản quản trị viên</p>
+
+                <div class="admin-stats-grid" id="admin-summary-boxes">
+                    <div class="admin-stat-box">
+                        <div class="val" id="admin-total-logins" style="color:var(--accent-cyan);">—</div>
+                        <div class="lbl">Tổng lượt đăng nhập</div>
+                    </div>
+                    <div class="admin-stat-box">
+                        <div class="val" id="admin-unique-officers" style="color:var(--accent-emerald);">—</div>
+                        <div class="lbl">Cán bộ đã truy cập</div>
+                    </div>
+                    <div class="admin-stat-box">
+                        <div class="val" id="admin-never-accessed" style="color:#f87171;">—</div>
+                        <div class="lbl">Chưa truy cập lần nào</div>
+                    </div>
+                </div>
+
+                <!-- Mục 1: Thống kê số lần truy cập theo cán bộ -->
+                <div class="admin-section-title">Mục 1 — Thống kê số lần truy cập theo cán bộ</div>
+                <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                    <table class="admin-log-table" id="admin-stats-table">
+                        <thead><tr>
+                            <th>Cán bộ</th>
+                            <th>Đội</th>
+                            <th style="text-align:center;">Số lần</th>
+                            <th>Lần đầu</th>
+                            <th>Lần cuối</th>
+                            <th style="text-align:center;">Trạng thái</th>
+                        </tr></thead>
+                        <tbody id="admin-stats-body">
+                            <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:30px;">Đang tải...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Cán bộ chưa truy cập -->
+                <div class="admin-section-title" id="admin-never-title">Cán bộ chưa truy cập lần nào</div>
+                <div id="admin-never-list" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;"></div>
+
+                <!-- Mục 2: Log chung toàn bộ lịch sử -->
+                <div class="admin-section-title">Mục 2 — Log chung toàn bộ lịch sử đăng nhập</div>
+                <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                    <table class="admin-log-table" id="admin-log-table">
+                        <thead><tr>
+                            <th>Thời gian</th>
+                            <th>Cán bộ</th>
+                            <th>Đội</th>
+                            <th>IP</th>
+                            <th>Thiết bị / Trình duyệt</th>
+                        </tr></thead>
+                        <tbody id="admin-log-body">
+                            <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:30px;">Đang tải...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -1623,8 +1749,92 @@
         async function loadCurrentOfficer() {
             try {
                 const res = await fetch('/api/vneid/me');
-                if (res.ok) CURRENT_OFFICER = await res.json();
+                if (res.ok) {
+                    CURRENT_OFFICER = await res.json();
+                    // Hiện tab Admin nếu là quản trị viên
+                    if (CURRENT_OFFICER && normName(CURRENT_OFFICER.name) === 'do duc thang') {
+                        const btn = document.getElementById('tab-btn-admin');
+                        if (btn) btn.style.display = '';
+                    }
+                }
             } catch (_e) { /* để null, gate sẽ chặn trước đó */ }
+        }
+
+        // Chuẩn hoá tên: bỏ cấp bậc, bỏ dấu, lowercase
+        function normName(s) {
+            const ranks = ['thuong ta','trung ta','thieu ta','dai ta','dai uy','thuong uy','trung uy','thieu uy','thuong si','trung si','ha si','binh nhi','binh nhat'];
+            let v = (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ').trim();
+            for (const r of ranks) { if (v.startsWith(r+' ')) { v = v.slice(r.length).trim(); break; } }
+            return v;
+        }
+
+        function parseUA(ua) {
+            if (!ua) return 'Không rõ';
+            if (/iPhone|iPad/i.test(ua)) return 'iOS';
+            if (/Android/i.test(ua)) return 'Android';
+            if (/Windows/i.test(ua)) return 'Windows';
+            if (/Mac/i.test(ua)) return 'Mac';
+            return ua.slice(0, 40);
+        }
+
+        function fmtTime(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
+        }
+
+        let adminDataLoaded = false;
+        async function loadAdminData() {
+            if (adminDataLoaded) return;
+            const [statsRes, logRes] = await Promise.all([
+                fetch('/api/vneid/admin/access-stats'),
+                fetch('/api/vneid/admin/access-log'),
+            ]);
+            if (!statsRes.ok || !logRes.ok) {
+                document.getElementById('admin-stats-body').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--accent-rose);padding:20px;">Không có quyền truy cập</td></tr>';
+                return;
+            }
+            const { accessed, neverAccessed } = await statsRes.json();
+            const { log } = await logRes.json();
+
+            // Summary boxes
+            document.getElementById('admin-total-logins').textContent = log.length.toLocaleString();
+            document.getElementById('admin-unique-officers').textContent = accessed.length;
+            document.getElementById('admin-never-accessed').textContent = neverAccessed.length;
+
+            // Mục 1: Thống kê theo cán bộ
+            const allStats = [
+                ...accessed.map(s => ({...s, hasAccessed: true})),
+                ...neverAccessed.map(s => ({...s, count: 0, firstAccess: null, lastAccess: null, hasAccessed: false}))
+            ];
+            document.getElementById('admin-stats-body').innerHTML = allStats.map(s => `
+                <tr>
+                    <td style="font-weight:600;color:#fff;">${s.officerName}</td>
+                    <td style="color:var(--text-secondary);">${s.team||'—'}</td>
+                    <td style="text-align:center;font-weight:700;font-family:monospace;color:${s.count>0?'var(--accent-cyan)':'var(--text-muted)'};">${s.count}</td>
+                    <td style="color:var(--text-secondary);font-size:0.8rem;">${fmtTime(s.firstAccess)}</td>
+                    <td style="color:var(--text-secondary);font-size:0.8rem;">${fmtTime(s.lastAccess)}</td>
+                    <td style="text-align:center;"><span class="${s.hasAccessed?'admin-badge-accessed':'admin-badge-never'}">${s.hasAccessed?'Đã truy cập':'Chưa vào'}</span></td>
+                </tr>
+            `).join('');
+
+            // Danh sách chưa truy cập dạng chip
+            document.getElementById('admin-never-list').innerHTML = neverAccessed.length
+                ? neverAccessed.map(o => `<span class="admin-badge-never">${o.officerName}</span>`).join('')
+                : '<span style="color:var(--accent-emerald);font-size:0.85rem;">✓ Tất cả cán bộ đã truy cập ít nhất 1 lần</span>';
+
+            // Mục 2: Log chung
+            document.getElementById('admin-log-body').innerHTML = log.length ? log.map(e => `
+                <tr>
+                    <td style="font-size:0.8rem;color:var(--text-secondary);white-space:nowrap;">${fmtTime(e.timestamp)}</td>
+                    <td style="font-weight:600;color:#fff;">${e.officerName}</td>
+                    <td style="color:var(--text-secondary);">${e.team||'—'}</td>
+                    <td style="font-family:monospace;font-size:0.78rem;color:var(--accent-cyan);">${e.ip}</td>
+                    <td><div class="admin-ua" title="${(e.userAgent||'').replace(/"/g,'')}">${parseUA(e.userAgent)}</div></td>
+                </tr>
+            `).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Chưa có dữ liệu log</td></tr>';
+
+            adminDataLoaded = true;
         }
 
         async function loadActivations() {
@@ -1804,6 +2014,10 @@
             } else if (tabId === 'guide') {
                 document.getElementById('tab-btn-guide').classList.add('active');
                 document.getElementById('tab-guide').classList.add('active');
+            } else if (tabId === 'admin') {
+                document.getElementById('tab-btn-admin').classList.add('active');
+                document.getElementById('tab-admin').classList.add('active');
+                loadAdminData();
             }
         }
 

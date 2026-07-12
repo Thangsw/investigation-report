@@ -7,4 +7,5 @@ work-progress-reports.json
 vneid-activations.json
 vneid-issues.json
 vneid-secret.txt
+vneid-access-log.json
 _testdata/

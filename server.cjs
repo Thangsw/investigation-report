@@ -17,6 +17,10 @@ const pendingChangesFile = path.join(DATA_DIR, 'pending-changes.json');
 const workProgressFile = path.join(DATA_DIR, 'work-progress-reports.json');
 const vneidActivationsFile = path.join(DATA_DIR, 'vneid-activations.json');
 const vneidIssuesFile = path.join(DATA_DIR, 'vneid-issues.json');
+const vneidAccessLogFile = path.join(DATA_DIR, 'vneid-access-log.json');
+
+// Admin name key (không dấu, lowercase, không cấp bậc)
+const VNEID_ADMIN_KEY = 'do duc thang';
 
 const DEFAULT_CONFIG = {
   totalCaseTarget: 610,
@@ -173,6 +177,35 @@ const updateVneidActivations = (updater) => {
   });
   vneidActivationQueue = operation.catch(() => {});
   return operation;
+};
+
+// ── VNeID Access Log ──────────────────────────────────────────────────────────
+const readVneidAccessLog = () => {
+  if (!fs.existsSync(vneidAccessLogFile)) return [];
+  try { return JSON.parse(fs.readFileSync(vneidAccessLogFile, 'utf8')); }
+  catch { return []; }
+};
+const writeVneidAccessLog = (data) => {
+  const tempFile = `${vneidAccessLogFile}.${process.pid}.tmp`;
+  fs.writeFileSync(tempFile, JSON.stringify(data, null, 2));
+  fs.renameSync(tempFile, vneidAccessLogFile);
+};
+let vneidAccessLogQueue = Promise.resolve();
+const appendVneidAccessLog = (entry) => {
+  const op = vneidAccessLogQueue.then(() => {
+    const current = readVneidAccessLog();
+    current.push(entry);
+    // Giữ tối đa 2000 bản ghi gần nhất để tránh file phình to
+    if (current.length > 2000) current.splice(0, current.length - 2000);
+    writeVneidAccessLog(current);
+  });
+  vneidAccessLogQueue = op.catch(() => {});
+  return op;
+};
+const getClientIp = (req) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return req.socket?.remoteAddress || 'unknown';
 };
 
 // Báo lỗi kích hoạt (VD: TK mức 1 nhưng hệ thống báo "Bạn đã kích hoạt")
@@ -943,6 +976,19 @@ app.post('/api/vneid/login', (req, res) => {
   const token = signSession({ n: officer.nameKey, exp });
   res.setHeader('Set-Cookie',
     `${VNEID_COOKIE}=${encodeURIComponent(token)}; Path=/; Max-Age=${VNEID_SESSION_DAYS * 86400}; HttpOnly; SameSite=Lax${IS_PRODUCTION ? '; Secure' : ''}`);
+
+  // Ghi access log
+  appendVneidAccessLog({
+    id: `${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+    officerName: officer.name,
+    team: officer.team,
+    group: officer.group,
+    ip: getClientIp(req),
+    userAgent: req.headers['user-agent'] || '',
+    timestamp: new Date().toISOString(),
+    action: 'login',
+  }).catch(() => {});
+
   res.json({ name: officer.name, team: officer.team, group: officer.group, position: officer.position });
 });
 
@@ -1027,6 +1073,44 @@ app.post('/api/vneid/issues', async (req, res) => {
     console.error('VNeID issue write failed:', err);
     res.status(500).json({ error: 'Không lưu được báo lỗi' });
   }
+});
+
+// ── VNeID Admin APIs (chỉ dành cho admin) ─────────────────────────────────────
+const isAdmin = (req) => {
+  const officer = currentOfficer(req);
+  return officer && officer.nameKey === VNEID_ADMIN_KEY;
+};
+
+// Mục 1: Log chung — toàn bộ lịch sử đăng nhập
+app.get('/api/vneid/admin/access-log', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Không có quyền truy cập' });
+  const log = readVneidAccessLog();
+  log.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  res.json({ log });
+});
+
+// Mục 2: Thống kê truy cập theo cán bộ — đếm lần, lần đầu, lần cuối
+app.get('/api/vneid/admin/access-stats', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Không có quyền truy cập' });
+  const log = readVneidAccessLog();
+  // Tổng hợp theo tên cán bộ
+  const statsMap = {};
+  for (const entry of log) {
+    const key = entry.officerName;
+    if (!statsMap[key]) {
+      statsMap[key] = { officerName: key, team: entry.team, group: entry.group, count: 0, firstAccess: entry.timestamp, lastAccess: entry.timestamp };
+    }
+    statsMap[key].count++;
+    if (entry.timestamp < statsMap[key].firstAccess) statsMap[key].firstAccess = entry.timestamp;
+    if (entry.timestamp > statsMap[key].lastAccess) statsMap[key].lastAccess = entry.timestamp;
+  }
+  const accessed = Object.values(statsMap).sort((a, b) => b.count - a.count);
+  // Cán bộ chưa từng truy cập
+  const accessedNames = new Set(accessed.map((s) => s.officerName));
+  const neverAccessed = VNEID_OFFICERS
+    .filter((o) => !accessedNames.has(o.name))
+    .map((o) => ({ officerName: o.name, team: o.team, group: o.group }));
+  res.json({ accessed, neverAccessed });
 });
 
 // ── VNeID gate: chặn /vneid và /vneid/* (gồm data.js) khi chưa đăng nhập ────────
