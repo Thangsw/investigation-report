@@ -131,6 +131,18 @@
             flex-wrap: wrap;
         }
 
+        @media (max-width: 700px) {
+            .tabs {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+            .tab-btn {
+                justify-content: center;
+                font-size: 0.82rem;
+                padding: 8px 10px;
+            }
+        }
+
         .tab-btn {
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid var(--border-color);
@@ -886,6 +898,16 @@
             color: var(--accent-amber) !important;
         }
 
+        .guide-step-img {
+            margin-top: 12px;
+            max-width: 100%;
+            width: auto;
+            max-height: 480px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            display: block;
+        }
+
         /* Guide panel */
         .guide-panel {
             padding: 24px;
@@ -1259,11 +1281,11 @@
                 </button>
                 <button class="tab-btn" id="tab-btn-officers" onclick="switchTab('officers')">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                    Tiến độ Cán bộ & Xuất báo cáo
+                    Tiến độ thực hiện
                 </button>
                 <button class="tab-btn tab-btn-guide" id="tab-btn-guide" onclick="switchTab('guide')">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
-                    Hướng dẫn kích hoạt
+                    HD Kích hoạt
                 </button>
             </div>
         </header>
@@ -1421,58 +1443,75 @@
         <div id="tab-guide" class="content-panel">
             <div class="guide-panel">
                 <h2>📋 Hướng dẫn kích hoạt tài khoản Định danh Điện tử Mức 2</h2>
-                <p class="guide-subtitle">Thực hiện trực tiếp trên điện thoại của công dân — yêu cầu app VNeID đã cài đặt và tài khoản Mức 1</p>
+                <p class="guide-subtitle">Công dân tự kích hoạt trên app VNeID sau khi đã đăng ký tại cơ quan Công an — thực hiện trong vòng 07 ngày kể từ khi nhận tin nhắn thông báo</p>
+
+                <img src="guide-images/cover.jpg" alt="Kích hoạt tài khoản định danh điện tử" style="width:100%; max-width:560px; border-radius: var(--radius-md); margin-bottom: 24px; display: block; border: 1px solid var(--border-color);">
 
                 <div class="guide-step">
                     <div class="guide-step-num">1</div>
                     <div class="guide-step-body">
-                        <div class="guide-step-title">Mở ứng dụng VNeID trên điện thoại công dân</div>
-                        <div class="guide-step-desc">Yêu cầu công dân mở app <b>VNeID</b>. Nếu chưa cài đặt, hướng dẫn tải từ <b>App Store</b> (iOS) hoặc <b>Google Play</b> (Android). Đảm bảo app đã đăng nhập tài khoản Mức 1.</div>
+                        <div class="guide-step-title">Mở ứng dụng VNeID và chọn "Kích hoạt tài khoản định danh điện tử"</div>
+                        <div class="guide-step-desc">Mở app VNeID trên điện thoại, tìm và nhấn vào mục <b>Kích hoạt tài khoản định danh điện tử</b>.</div>
+                        <img src="guide-images/step-1.png" alt="Bước 1" class="guide-step-img">
                     </div>
                 </div>
 
                 <div class="guide-step">
                     <div class="guide-step-num">2</div>
                     <div class="guide-step-body">
-                        <div class="guide-step-title">Vào mục "Định danh điện tử" → chọn "Kích hoạt tài khoản"</div>
-                        <div class="guide-step-desc">Tại màn hình chính app VNeID, chọn <b>Định danh điện tử</b>. Tìm và nhấn <b>Kích hoạt tài khoản Mức 2</b> (hoặc biểu tượng kích hoạt).</div>
+                        <div class="guide-step-title">Nhập số định danh cá nhân và số điện thoại → chọn "Gửi yêu cầu"</div>
+                        <div class="guide-step-desc">Nhập <b>số định danh cá nhân</b> (chính là số CCCD gắn chip) và <b>số điện thoại</b> đã dùng khi đăng ký tài khoản tại Công an. Sau đó nhấn <b>Gửi yêu cầu</b>.</div>
+                        <img src="guide-images/step-2.png" alt="Bước 2" class="guide-step-img">
                     </div>
                 </div>
 
                 <div class="guide-step">
                     <div class="guide-step-num">3</div>
                     <div class="guide-step-body">
-                        <div class="guide-step-title">Xác thực bằng thẻ CCCD gắn chip</div>
-                        <div class="guide-step-desc">App yêu cầu quét NFC thẻ CCCD. Hướng dẫn công dân: đặt điện thoại lên mặt sau thẻ CCCD và giữ yên đến khi đọc xong. Một số máy cần thử nhiều vị trí khác nhau của thẻ.</div>
+                        <div class="guide-step-title">Nhập mã OTP gửi về điện thoại</div>
+                        <div class="guide-step-desc">Nhập <b>mã OTP</b> vừa được gửi về số điện thoại đã nhập ở bước 2.</div>
+                        <img src="guide-images/step-3.png" alt="Bước 3" class="guide-step-img">
                     </div>
                 </div>
 
                 <div class="guide-step">
                     <div class="guide-step-num">4</div>
                     <div class="guide-step-body">
-                        <div class="guide-step-title">Chụp ảnh chân dung (xác thực sinh trắc học)</div>
-                        <div class="guide-step-desc">App yêu cầu chụp ảnh khuôn mặt để xác thực. Đảm bảo <b>ánh sáng đủ</b>, khuôn mặt rõ ràng, không đội mũ/đeo kính đậm. Nhìn thẳng vào camera, thực hiện theo hướng dẫn trên màn hình (gật đầu, quay trái/phải nếu có).</div>
+                        <div class="guide-step-title">Thiết lập mật khẩu</div>
+                        <div class="guide-step-desc">Đặt mật khẩu gồm <b>8–20 ký tự</b>, bao gồm chữ số, chữ hoa, chữ thường và ít nhất một ký tự đặc biệt <b>! @ # $ ^ * ( ) –</b></div>
+                        <img src="guide-images/step-4.png" alt="Bước 4" class="guide-step-img">
                     </div>
                 </div>
 
                 <div class="guide-step">
                     <div class="guide-step-num">5</div>
                     <div class="guide-step-body">
-                        <div class="guide-step-title">Đợi hệ thống xử lý và xác nhận kết quả</div>
-                        <div class="guide-step-desc">Hệ thống đối chiếu dữ liệu sinh trắc học — thường mất <b>10–30 giây</b>. Kết quả thành công: app hiển thị thông báo <b>"Kích hoạt tài khoản Mức 2 thành công"</b> và biểu tượng Mức 2 được kích hoạt trên tài khoản.</div>
+                        <div class="guide-step-title">Thiết lập mã Passcode</div>
+                        <div class="guide-step-desc">Đặt <b>mã passcode</b> gồm 6 chữ số (0–9). Dùng để đăng nhập nhanh vào app.</div>
+                        <img src="guide-images/step-5.png" alt="Bước 5" class="guide-step-img">
                     </div>
                 </div>
 
                 <div class="guide-step">
                     <div class="guide-step-num">6</div>
                     <div class="guide-step-body">
-                        <div class="guide-step-title">Báo cáo kết quả vào hệ thống</div>
-                        <div class="guide-step-desc">Sau khi kích hoạt xong, quay lại tab <b>Tra cứu danh sách</b>, tìm công dân và nhấn <b>Báo cáo</b> → chọn <b>Kích hoạt thành công</b>. Nếu gặp lỗi, chọn <b>Báo lỗi</b> và mô tả lỗi gặp phải.</div>
+                        <div class="guide-step-title">Thiết lập câu hỏi bảo mật</div>
+                        <div class="guide-step-desc">Chọn lần lượt từng câu hỏi bảo mật và điền câu trả lời. <b>Ghi nhớ câu trả lời</b> — sẽ được dùng để xác minh danh tính khi cần thiết.</div>
+                        <img src="guide-images/step-6.png" alt="Bước 6" class="guide-step-img">
+                    </div>
+                </div>
+
+                <div class="guide-step">
+                    <div class="guide-step-num">7</div>
+                    <div class="guide-step-body">
+                        <div class="guide-step-title">Hoàn tất — tài khoản Mức 2 đã được kích hoạt</div>
+                        <div class="guide-step-desc">App hiển thị kết quả thiết lập thành công. Tài khoản định danh điện tử Mức 2 đã được kích hoạt.</div>
+                        <img src="guide-images/step-7.png" alt="Bước 7" class="guide-step-img">
                     </div>
                 </div>
 
                 <div class="guide-note">
-                    ⚠ <b>Lưu ý:</b> Một số trường hợp thường gặp lỗi — thẻ CCCD cũ (không có chip), điện thoại không hỗ trợ NFC, ảnh sinh trắc không khớp. Trường hợp không kích hoạt được, ghi nhận vào mục <b>Báo lỗi</b> để tổng hợp báo cáo lên cấp trên.
+                    ⚠ <b>Lưu ý:</b> Sau khi đăng ký tại Công an, công dân phải kích hoạt trong vòng <b>07 ngày</b>. Quá hạn, liên hệ tổng đài định danh điện tử để kích hoạt lại. Nếu gặp lỗi khi thực hiện, vui lòng nhấn <b>Báo lỗi</b> từ màn hình tra cứu để ghi nhận.
                 </div>
             </div>
         </div>
