@@ -675,6 +675,36 @@
             background: rgba(255, 255, 255, 0.04);
         }
 
+        .officer-card-met {
+            border-color: rgba(16, 185, 129, 0.35);
+            background: rgba(16, 185, 129, 0.05);
+        }
+        .officer-card-met:hover {
+            border-color: rgba(16, 185, 129, 0.5);
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        .rank-num {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-weight: 700;
+            font-family: monospace;
+        }
+        .rank-medal {
+            flex-shrink: 0;
+            font-size: 1.3rem;
+            line-height: 24px;
+        }
+
         .officer-header {
             display: flex;
             justify-content: space-between;
@@ -2525,34 +2555,45 @@
                 return;
             }
             
-            // Group and sort officers: leadership first, then teams
+            // Đếm số kích hoạt của từng cán bộ trước
+            const countByOfficer = {};
+            Object.values(ACTIVATION_LOGS).forEach(log => {
+                countByOfficer[log.officerName] = (countByOfficer[log.officerName] || 0) + 1;
+            });
+
+            // Xếp theo số kích hoạt từ cao xuống thấp (ai đạt 10/10 lên đầu),
+            // cùng số lượng thì theo tên
             const sortedOfficers = [...OFFICER_DATA].sort((a, b) => {
-                if (a.team === 'Lãnh đạo' && b.team !== 'Lãnh đạo') return -1;
-                if (a.team !== 'Lãnh đạo' && b.team === 'Lãnh đạo') return 1;
-                if (a.team !== b.team) return a.team.localeCompare(b.team);
+                const ca = countByOfficer[a.name] || 0;
+                const cb = countByOfficer[b.name] || 0;
+                if (cb !== ca) return cb - ca;
                 return a.name.localeCompare(b.name, 'vi');
             });
-            
-            sortedOfficers.forEach(officer => {
-                // Count activations
-                let count = 0;
-                Object.values(ACTIVATION_LOGS).forEach(log => {
-                    if (log.officerName === officer.name) {
-                        count++;
-                    }
-                });
-                
+
+            sortedOfficers.forEach((officer, idx) => {
+                const count = countByOfficer[officer.name] || 0;
+
                 const pct = Math.min((count / 10) * 100, 100);
                 const isMet = count >= 10;
-                
+                const rank = idx + 1;
+                // Huy hiệu top 3 (chỉ cho người đã kích hoạt được ít nhất 1)
+                let rankBadge = `<span class="rank-num">${rank}</span>`;
+                if (count > 0 && rank <= 3) {
+                    const medals = ['🥇', '🥈', '🥉'];
+                    rankBadge = `<span class="rank-medal">${medals[rank - 1]}</span>`;
+                }
+
                 const card = document.createElement('div');
-                card.className = 'officer-card';
-                
+                card.className = 'officer-card' + (isMet ? ' officer-card-met' : '');
+
                 card.innerHTML = `
                     <div class="officer-header">
-                        <div>
-                            <div class="officer-name">${officer.name}</div>
-                            <div class="officer-meta">${officer.position} - ${officer.team} (Tổ ${officer.group})</div>
+                        <div style="display:flex; align-items:flex-start; gap:10px;">
+                            ${rankBadge}
+                            <div>
+                                <div class="officer-name">${officer.name}</div>
+                                <div class="officer-meta">${officer.position} - ${officer.team} (Tổ ${officer.group})</div>
+                            </div>
                         </div>
                         <span class="badge ${isMet ? 'success' : 'warning'}">${isMet ? 'Đạt chỉ tiêu' : 'Chưa đạt'}</span>
                     </div>
