@@ -1768,8 +1768,8 @@
             <div class="action-bar">
                 <h2>Theo dõi tiến độ chỉ tiêu cán bộ (Chỉ tiêu: ≥10 hồ sơ)</h2>
                 <div class="action-btn-group">
-                    <button class="action-btn" style="background: var(--accent-emerald); border-color: var(--accent-emerald);" onclick="exportExcelReport()">📊 Xuất Excel</button>
-                    <button class="action-btn" style="background: var(--primary);" onclick="exportTextReport()">Trích xuất báo cáo (Text)</button>
+                    <button class="action-btn" id="btn-export-excel" style="background: var(--accent-emerald); border-color: var(--accent-emerald); display:none;" onclick="exportExcelReport()">📊 Xuất Excel</button>
+                    <button class="action-btn" id="btn-export-text" style="background: var(--primary); display:none;" onclick="exportTextReport()">Trích xuất báo cáo (Text)</button>
                 </div>
             </div>
 
@@ -1897,10 +1897,14 @@
                 const res = await fetch('/api/vneid/me');
                 if (res.ok) {
                     CURRENT_OFFICER = await res.json();
-                    // Hiện tab Admin nếu là quản trị viên
+                    // Hiện tab Admin + nút xuất báo cáo nếu là quản trị viên
                     if (CURRENT_OFFICER && normName(CURRENT_OFFICER.name) === 'do duc thang') {
                         const btn = document.getElementById('tab-btn-admin');
                         if (btn) btn.style.display = '';
+                        const btnXls = document.getElementById('btn-export-excel');
+                        if (btnXls) btnXls.style.display = '';
+                        const btnTxt = document.getElementById('btn-export-text');
+                        if (btnTxt) btnTxt.style.display = '';
                     }
                 }
             } catch (_e) { /* để null, gate sẽ chặn trước đó */ }
@@ -2002,6 +2006,25 @@
             }
         }
 
+        // Bảng xếp hạng thi đua: số lượng kích hoạt theo cán bộ (mọi người xem được).
+        // Chỉ chứa {tên cán bộ: số lượng}, KHÔNG có CCCD/tên công dân.
+        let LEADERBOARD_COUNTS = {};
+        async function loadLeaderboard() {
+            try {
+                const res = await fetch('/api/vneid/leaderboard');
+                if (!res.ok) return;
+                const { counts } = await res.json();
+                LEADERBOARD_COUNTS = counts || {};
+            } catch (e) {
+                console.error('Lỗi tải bảng xếp hạng từ server:', e);
+            }
+        }
+
+        // Cán bộ hiện tại có phải admin không (để bật/tắt tính năng xem chi tiết công dân)
+        function isCurrentOfficerAdmin() {
+            return CURRENT_OFFICER && normName(CURRENT_OFFICER.name) === 'do duc thang';
+        }
+
         // Reverse column map for quick access
         const COL_IDX = {};
 
@@ -2060,8 +2083,8 @@
                 return;
             }
 
-            // Nạp cán bộ đang đăng nhập + dữ liệu kích hoạt (tháng hiện tại) từ server
-            await Promise.all([loadCurrentOfficer(), loadActivations()]);
+            // Nạp cán bộ đang đăng nhập + dữ liệu kích hoạt (tháng hiện tại) + bảng xếp hạng
+            await Promise.all([loadCurrentOfficer(), loadActivations(), loadLeaderboard()]);
             renderCurrentOfficerBanner();
 
             // Populate COL_IDX here!
@@ -2107,12 +2130,13 @@
         function updateGlobalStats() {
             const total = RESIDENT_DATA.length;
 
-            // Count locally activated residents
-            const localActivatedCount = Object.keys(ACTIVATION_LOGS).length;
-            document.getElementById('stat-local-activated').innerText = localActivatedCount.toLocaleString();
+            // Tổng số đã kích hoạt toàn đơn vị = tổng bảng xếp hạng (mọi người xem được).
+            // Không dùng ACTIVATION_LOGS vì non-admin chỉ có bản ghi của chính mình.
+            const totalActivatedAllUnits = Object.values(LEADERBOARD_COUNTS || {}).reduce((s, n) => s + n, 0);
+            document.getElementById('stat-local-activated').innerText = totalActivatedAllUnits.toLocaleString();
 
-            // Tổng chưa kích hoạt = tổng danh sách - đã kích hoạt cục bộ
-            const remainingTotal = Math.max(total - localActivatedCount, 0);
+            // Tổng chưa kích hoạt = tổng danh sách - đã kích hoạt toàn đơn vị
+            const remainingTotal = Math.max(total - totalActivatedAllUnits, 0);
             document.getElementById('stat-total').innerText = remainingTotal.toLocaleString();
 
             const m1Count = RESIDENT_DATA.filter(row => {
@@ -2622,11 +2646,9 @@
                 return;
             }
             
-            // Đếm số kích hoạt của từng cán bộ trước
-            const countByOfficer = {};
-            Object.values(ACTIVATION_LOGS).forEach(log => {
-                countByOfficer[log.officerName] = (countByOfficer[log.officerName] || 0) + 1;
-            });
+            // Số lượng lấy từ bảng xếp hạng server (mọi người xem được — chỉ có số, không kèm CCCD)
+            const countByOfficer = LEADERBOARD_COUNTS || {};
+            const admin = isCurrentOfficerAdmin();
 
             // Xếp theo số kích hoạt từ cao xuống thấp (ai đạt 10/10 lên đầu),
             // cùng số lượng thì theo tên
@@ -2653,12 +2675,17 @@
                 const card = document.createElement('div');
                 card.className = 'officer-card' + (isMet ? ' officer-card-met' : '');
 
+                // Chỉ admin mới bấm tên xem được danh sách công dân thật
+                const nameHtml = admin
+                    ? `<div class="officer-name officer-name-link" onclick="event.stopPropagation(); showOfficerActivations('${officer.name.replace(/'/g, "\\'")}')" title="Bấm để xem danh sách công dân đã kích hoạt">${officer.name}</div>`
+                    : `<div class="officer-name">${officer.name}</div>`;
+
                 card.innerHTML = `
                     <div class="officer-header">
                         <div style="display:flex; align-items:flex-start; gap:10px;">
                             ${rankBadge}
                             <div>
-                                <div class="officer-name officer-name-link" onclick="event.stopPropagation(); showOfficerActivations('${officer.name.replace(/'/g, "\\'")}')" title="Bấm để xem danh sách công dân đã kích hoạt">${officer.name}</div>
+                                ${nameHtml}
                                 <div class="officer-meta">${officer.position} - ${officer.team} (Tổ ${officer.group})</div>
                             </div>
                         </div>

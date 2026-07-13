@@ -1005,11 +1005,16 @@ app.get('/api/vneid/me', (req, res) => {
 });
 
 // Log kích hoạt — chỉ tính theo tháng (mặc định tháng hiện tại). "Reset mùng 1" = lọc theo tháng.
+// Bảo mật: cán bộ thường chỉ thấy bản ghi của CHÍNH MÌNH; chỉ admin thấy toàn bộ.
 app.get('/api/vneid/activations', (req, res) => {
-  if (!currentOfficer(req)) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  const officer = currentOfficer(req);
+  if (!officer) return res.status(401).json({ error: 'Chưa đăng nhập' });
   const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : monthKey();
+  const admin = officer.nameKey === VNEID_ADMIN_KEY;
   const all = readVneidActivations();
-  res.json({ month, activations: all.filter((a) => a.month === month) });
+  let list = all.filter((a) => a.month === month);
+  if (!admin) list = list.filter((a) => a.officerName === officer.name);
+  res.json({ month, activations: list, isAdmin: admin });
 });
 
 app.post('/api/vneid/activations', async (req, res) => {
@@ -1043,10 +1048,24 @@ app.post('/api/vneid/activations', async (req, res) => {
   }
 });
 
+// Bảng xếp hạng thi đua — mọi cán bộ đều xem được. CHỈ trả tên cán bộ + số lượng,
+// KHÔNG kèm CCCD/tên công dân (thông tin công dân thật chỉ admin thấy).
+app.get('/api/vneid/leaderboard', (req, res) => {
+  if (!currentOfficer(req)) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : monthKey();
+  const all = readVneidActivations().filter((a) => a.month === month);
+  const countByOfficer = {};
+  all.forEach((a) => { countByOfficer[a.officerName] = (countByOfficer[a.officerName] || 0) + 1; });
+  res.json({ month, counts: countByOfficer });
+});
+
 // Xuất Excel danh sách kích hoạt. Client gửi rows (đã ghép tên/đội cán bộ +
 // tên/địa chỉ công dân từ data.js phía client), server dựng file .xlsx.
+// Bảo mật: CHỈ admin được xuất (chứa CCCD + tên công dân thật).
 app.post('/api/vneid/activations/export', (req, res) => {
-  if (!currentOfficer(req)) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  const officer = currentOfficer(req);
+  if (!officer) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  if (officer.nameKey !== VNEID_ADMIN_KEY) return res.status(403).json({ error: 'Không có quyền xuất dữ liệu' });
   try {
     const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
     const header = ['STT', 'Tên cán bộ', 'Đội', 'Công dân kích hoạt được', 'Số CCCD', 'Địa chỉ'];
@@ -1076,8 +1095,11 @@ app.post('/api/vneid/activations/export', (req, res) => {
 });
 
 // Báo lỗi kích hoạt cho 1 công dân (VD: TK mức 1 nhưng hệ thống báo "Bạn đã kích hoạt")
+// Bảo mật: danh sách báo lỗi chứa CCCD + tên công dân → chỉ admin xem được.
 app.get('/api/vneid/issues', (req, res) => {
-  if (!currentOfficer(req)) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  const officer = currentOfficer(req);
+  if (!officer) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  if (officer.nameKey !== VNEID_ADMIN_KEY) return res.status(403).json({ error: 'Không có quyền truy cập' });
   res.json({ issues: readVneidIssues() });
 });
 
