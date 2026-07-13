@@ -489,6 +489,31 @@
             box-shadow: none;
         }
 
+        /* Dòng công dân đã kích hoạt — nổi bật hơn khi tìm thấy */
+        tr.row-activated td {
+            background: rgba(16, 185, 129, 0.09);
+        }
+        tr.row-activated:hover td {
+            background: rgba(16, 185, 129, 0.15) !important;
+        }
+        tr.row-activated td:first-child {
+            box-shadow: inset 3px 0 0 var(--accent-emerald);
+        }
+        .activated-check {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            margin-right: 6px;
+            border-radius: 50%;
+            background: var(--accent-emerald);
+            color: #062a20;
+            font-size: 0.72rem;
+            font-weight: 800;
+            vertical-align: middle;
+        }
+
         /* Pagination */
         .pagination-container {
             display: flex;
@@ -709,6 +734,15 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+        }
+
+        .officer-name-link {
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+        .officer-name-link:hover {
+            color: var(--accent-cyan);
+            text-decoration: underline;
         }
 
         .officer-name {
@@ -1734,6 +1768,7 @@
             <div class="action-bar">
                 <h2>Theo dõi tiến độ chỉ tiêu cán bộ (Chỉ tiêu: ≥10 hồ sơ)</h2>
                 <div class="action-btn-group">
+                    <button class="action-btn" style="background: var(--accent-emerald); border-color: var(--accent-emerald);" onclick="exportExcelReport()">📊 Xuất Excel</button>
                     <button class="action-btn" style="background: var(--primary);" onclick="exportTextReport()">Trích xuất báo cáo (Text)</button>
                 </div>
             </div>
@@ -1818,6 +1853,31 @@
                 <div style="display: flex; gap: 12px; margin-top: 16px; justify-content: flex-end;">
                     <button class="action-btn" style="background: rgba(255,255,255,0.05); border-color: var(--border-color); color: var(--text-secondary);" onclick="closeModal('report-modal')">Đóng</button>
                     <button class="action-btn" style="background: var(--primary);" onclick="copyReportText()">Sao chép báo cáo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Officer Activation List Modal -->
+    <div class="modal" id="officer-list-modal" onclick="closeModal('officer-list-modal')">
+        <div class="modal-content" style="max-width: 760px;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="officer-list-title">Danh sách công dân đã kích hoạt</h3>
+                <button class="close-btn" onclick="closeModal('officer-list-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="officer-list-sub" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;"></p>
+                <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                    <table class="admin-log-table" id="officer-list-table">
+                        <thead><tr>
+                            <th>STT</th>
+                            <th>Công dân</th>
+                            <th>Số CCCD</th>
+                            <th>Địa chỉ</th>
+                            <th>Thời điểm</th>
+                        </tr></thead>
+                        <tbody id="officer-list-body"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -2046,11 +2106,14 @@
         // Calculate and update stats cards dynamically
         function updateGlobalStats() {
             const total = RESIDENT_DATA.length;
-            document.getElementById('stat-total').innerText = total.toLocaleString();
 
             // Count locally activated residents
             const localActivatedCount = Object.keys(ACTIVATION_LOGS).length;
             document.getElementById('stat-local-activated').innerText = localActivatedCount.toLocaleString();
+
+            // Tổng chưa kích hoạt = tổng danh sách - đã kích hoạt cục bộ
+            const remainingTotal = Math.max(total - localActivatedCount, 0);
+            document.getElementById('stat-total').innerText = remainingTotal.toLocaleString();
 
             const m1Count = RESIDENT_DATA.filter(row => {
                 const profile = getVal(row, 'Tình trạng hồ sơ ĐDĐT');
@@ -2205,9 +2268,13 @@
                     actionButtonHtml = `<button class="action-btn" onclick="event.stopPropagation(); startActivationByIndex(${globalIndex})">Báo cáo</button>`;
                 }
 
+                const nameCell = isLocalActivated
+                    ? `<td style="font-weight: 600; color: #fff;"><span class="activated-check">✓</span>${getVal(row, 'Họ tên')}</td>`
+                    : `<td style="font-weight: 600; color: #fff;">${getVal(row, 'Họ tên')}</td>`;
+
                 rowsHtml += `
-                    <tr onclick="showDetailsByIndex(${globalIndex})">
-                        <td style="font-weight: 600; color: #fff;">${getVal(row, 'Họ tên')}</td>
+                    <tr class="${isLocalActivated ? 'row-activated' : ''}" onclick="showDetailsByIndex(${globalIndex})">
+                        ${nameCell}
                         <td style="font-family: monospace;">${cccdHtml}</td>
                         <td>${dob} ${ageStr}</td>
                         <td><span class="badge ${getVal(row, 'Tình trạng hồ sơ ĐDĐT').includes('2') ? 'danger' : 'warning'}">${getVal(row, 'Tình trạng hồ sơ ĐDĐT')}</span></td>
@@ -2591,7 +2658,7 @@
                         <div style="display:flex; align-items:flex-start; gap:10px;">
                             ${rankBadge}
                             <div>
-                                <div class="officer-name">${officer.name}</div>
+                                <div class="officer-name officer-name-link" onclick="event.stopPropagation(); showOfficerActivations('${officer.name.replace(/'/g, "\\'")}')" title="Bấm để xem danh sách công dân đã kích hoạt">${officer.name}</div>
                                 <div class="officer-meta">${officer.position} - ${officer.team} (Tổ ${officer.group})</div>
                             </div>
                         </div>
@@ -2610,6 +2677,97 @@
                 container.appendChild(card);
             });
         }
+
+        // Gom bản ghi kích hoạt kèm thông tin công dân + cán bộ.
+        // Trả về [{officerName, team, residentName, cccd, address, timestamp}] xếp theo cán bộ.
+        function buildActivationRows() {
+            if (typeof OFFICER_DATA === 'undefined' || typeof RESIDENT_DATA === 'undefined') return [];
+
+            // Map CCCD -> {name, address}
+            const cccdMap = {};
+            RESIDENT_DATA.forEach(row => {
+                const cccd = getVal(row, 'Số CCCD/ĐDCD');
+                const cleanCccd = cccd.endsWith('*') ? cccd.slice(0, -1) : cccd;
+                cccdMap[cleanCccd] = {
+                    name: getVal(row, 'Họ tên'),
+                    address: getVal(row, 'Địa chỉ thường trú') || getVal(row, 'Đơn vị') || '',
+                };
+            });
+
+            // Map tên cán bộ -> đội
+            const teamByOfficer = {};
+            OFFICER_DATA.forEach(off => { teamByOfficer[off.name] = off.team || ''; });
+
+            const rows = [];
+            Object.entries(ACTIVATION_LOGS).forEach(([cccd, log]) => {
+                const resident = cccdMap[cccd] || { name: 'Không rõ', address: '' };
+                rows.push({
+                    officerName: log.officerName,
+                    team: teamByOfficer[log.officerName] || '',
+                    residentName: resident.name,
+                    cccd,
+                    address: resident.address,
+                    timestamp: log.timestamp,
+                });
+            });
+
+            // Xếp theo tên cán bộ, rồi theo thời điểm kích hoạt
+            rows.sort((a, b) => {
+                const c = a.officerName.localeCompare(b.officerName, 'vi');
+                if (c !== 0) return c;
+                return (a.timestamp || '').localeCompare(b.timestamp || '');
+            });
+            return rows;
+        }
+
+        // Xuất Excel qua server (dùng thư viện XLSX server-side)
+        async function exportExcelReport() {
+            const rows = buildActivationRows();
+            if (rows.length === 0) {
+                alert('Chưa có dữ liệu kích hoạt để xuất.');
+                return;
+            }
+            try {
+                const res = await fetch('/api/vneid/activations/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rows }),
+                });
+                if (!res.ok) { alert('Không xuất được Excel. Vui lòng thử lại.'); return; }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'kich-hoat-vneid.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error('Export Excel lỗi:', e);
+                alert('Lỗi kết nối khi xuất Excel.');
+            }
+        }
+
+        // Bấm tên cán bộ ở tab tiến độ -> hiện danh sách công dân cán bộ đó đã kích hoạt
+        window.showOfficerActivations = function(officerName) {
+            const rows = buildActivationRows().filter(r => r.officerName === officerName);
+            document.getElementById('officer-list-title').innerText = `Danh sách kích hoạt — ${officerName}`;
+            document.getElementById('officer-list-sub').innerText =
+                rows.length ? `Tổng cộng ${rows.length} công dân đã kích hoạt` : 'Cán bộ này chưa kích hoạt cho công dân nào.';
+            const body = document.getElementById('officer-list-body');
+            body.innerHTML = rows.length
+                ? rows.map((r, i) => `
+                    <tr>
+                        <td style="text-align:center;">${i + 1}</td>
+                        <td style="font-weight:600;color:#fff;">${r.residentName}</td>
+                        <td style="font-family:monospace;">${r.cccd}</td>
+                        <td style="color:var(--text-secondary);font-size:0.82rem;">${r.address}</td>
+                        <td style="color:var(--text-secondary);font-size:0.8rem;white-space:nowrap;">${fmtTimestamp(r.timestamp)}</td>
+                    </tr>`).join('')
+                : '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:30px;">Chưa có dữ liệu</td></tr>';
+            document.getElementById('officer-list-modal').classList.add('active');
+        };
 
         // Export text report
         function exportTextReport() {

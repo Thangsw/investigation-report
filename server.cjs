@@ -1043,6 +1043,38 @@ app.post('/api/vneid/activations', async (req, res) => {
   }
 });
 
+// Xuất Excel danh sách kích hoạt. Client gửi rows (đã ghép tên/đội cán bộ +
+// tên/địa chỉ công dân từ data.js phía client), server dựng file .xlsx.
+app.post('/api/vneid/activations/export', (req, res) => {
+  if (!currentOfficer(req)) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  try {
+    const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+    const header = ['STT', 'Tên cán bộ', 'Đội', 'Công dân kích hoạt được', 'Số CCCD', 'Địa chỉ'];
+    const aoa = [header];
+    rows.forEach((r, i) => {
+      aoa.push([
+        i + 1,
+        String(r.officerName || ''),
+        String(r.team || ''),
+        String(r.residentName || ''),
+        String(r.cccd || ''),
+        String(r.address || ''),
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 5 }, { wch: 26 }, { wch: 18 }, { wch: 26 }, { wch: 16 }, { wch: 45 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Kich hoat VNeID');
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', 'attachment; filename="kich-hoat-vneid.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buf);
+  } catch (err) {
+    console.error('VNeID export failed:', err);
+    res.status(500).json({ error: 'Lỗi xuất Excel' });
+  }
+});
+
 // Báo lỗi kích hoạt cho 1 công dân (VD: TK mức 1 nhưng hệ thống báo "Bạn đã kích hoạt")
 app.get('/api/vneid/issues', (req, res) => {
   if (!currentOfficer(req)) return res.status(401).json({ error: 'Chưa đăng nhập' });
