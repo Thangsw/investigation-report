@@ -1464,12 +1464,18 @@
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-info">
+                <div class="stat-info" style="width:100%;">
                     <h3>Đã kích hoạt cục bộ</h3>
-                    <div class="stat-value" id="stat-local-activated" style="color: var(--accent-emerald);">0</div>
+                    <div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;">
+                        <div class="stat-value" id="stat-local-activated" style="color: var(--accent-emerald);">0</div>
+                        <span id="stat-local-activated-pct" style="font-size:0.9rem; font-weight:700; color: var(--accent-emerald);"></span>
+                    </div>
                     <div class="stat-subtitle" id="stat-local-activated-subtitle">Kích hoạt thông qua cán bộ</div>
+                    <div class="progress-bar-container" style="margin-top:8px;">
+                        <div class="progress-bar-fill" id="stat-local-activated-bar" style="width:0%; background: linear-gradient(to right, var(--accent-emerald), var(--accent-cyan));"></div>
+                    </div>
                 </div>
-                <div class="stat-icon emerald">
+                <div class="stat-icon emerald" style="align-self:flex-start;">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                 </div>
             </div>
@@ -2134,6 +2140,19 @@
             // Không dùng ACTIVATION_LOGS vì non-admin chỉ có bản ghi của chính mình.
             const totalActivatedAllUnits = Object.values(LEADERBOARD_COUNTS || {}).reduce((s, n) => s + n, 0);
             document.getElementById('stat-local-activated').innerText = totalActivatedAllUnits.toLocaleString();
+
+            // % so với tổng chỉ tiêu toàn đơn vị = (số cán bộ × 10 hồ sơ/người)
+            const officerCount = (typeof OFFICER_DATA !== 'undefined') ? OFFICER_DATA.length : 0;
+            const targetTotal = officerCount * 10;
+            const pctOfTarget = targetTotal > 0 ? (totalActivatedAllUnits / targetTotal) * 100 : 0;
+            const pctEl = document.getElementById('stat-local-activated-pct');
+            const barEl = document.getElementById('stat-local-activated-bar');
+            const subEl = document.getElementById('stat-local-activated-subtitle');
+            if (pctEl) pctEl.innerText = targetTotal > 0 ? `${pctOfTarget.toFixed(1)}%` : '';
+            if (barEl) barEl.style.width = `${Math.min(pctOfTarget, 100)}%`;
+            if (subEl) subEl.innerText = targetTotal > 0
+                ? `Đạt ${totalActivatedAllUnits.toLocaleString()}/${targetTotal.toLocaleString()} chỉ tiêu (${officerCount} cán bộ × 10)`
+                : 'Kích hoạt thông qua cán bộ';
 
             // Tổng chưa kích hoạt = tổng danh sách - đã kích hoạt toàn đơn vị
             const remainingTotal = Math.max(total - totalActivatedAllUnits, 0);
