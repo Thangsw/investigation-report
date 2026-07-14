@@ -1688,6 +1688,30 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Mục 4: Kiểm tra trùng lặp -->
+                <div class="admin-accordion" id="acc-dup">
+                    <div class="admin-accordion-header" onclick="toggleAccordion('acc-dup')">
+                        <h3>Mục 4 — Kiểm tra báo cáo trùng (2 cán bộ cùng 1 công dân)</h3>
+                        <span class="admin-accordion-arrow">▼</span>
+                    </div>
+                    <div class="admin-accordion-body">
+                        <p id="admin-dup-summary" style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">Đang tải...</p>
+                        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                            <table class="admin-log-table">
+                                <thead><tr>
+                                    <th>Số CCCD</th>
+                                    <th>Tháng</th>
+                                    <th style="text-align:center;">Số lần</th>
+                                    <th>Các cán bộ cùng báo</th>
+                                </tr></thead>
+                                <tbody id="admin-dup-body">
+                                    <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:30px;">Đang tải...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1995,6 +2019,32 @@
                 </tr>
             `).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Chưa có dữ liệu log</td></tr>';
 
+            // Mục 4: Kiểm tra trùng
+            try {
+                const dupRes = await fetch('/api/vneid/admin/duplicates');
+                if (dupRes.ok) {
+                    const { totalRecords, duplicateCount, duplicates } = await dupRes.json();
+                    const summaryEl = document.getElementById('admin-dup-summary');
+                    const dupBody = document.getElementById('admin-dup-body');
+                    if (duplicateCount === 0) {
+                        summaryEl.innerHTML = `✅ <b style="color:var(--accent-emerald);">Không có trường hợp trùng nào</b> trên tổng ${totalRecords.toLocaleString()} bản ghi. Mỗi công dân chỉ được 1 cán bộ báo cáo.`;
+                        dupBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--accent-emerald);padding:20px;">✓ Không phát hiện trùng lặp</td></tr>';
+                    } else {
+                        summaryEl.innerHTML = `⚠️ <b style="color:var(--accent-rose);">Phát hiện ${duplicateCount} công dân bị báo trùng</b> trên tổng ${totalRecords.toLocaleString()} bản ghi.`;
+                        dupBody.innerHTML = duplicates.map(d => `
+                            <tr>
+                                <td style="font-family:monospace;font-weight:600;color:#fff;">${d.cccd}</td>
+                                <td style="color:var(--text-secondary);">${d.month}</td>
+                                <td style="text-align:center;font-weight:700;color:var(--accent-rose);">${d.count}</td>
+                                <td style="font-size:0.82rem;">${d.officers.map(o => `${o.officerName} <span style="color:var(--text-muted);">(${fmtTime(o.timestamp)})</span>`).join('<br>')}</td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+            } catch (e) {
+                console.error('Lỗi tải kiểm tra trùng:', e);
+            }
+
             adminDataLoaded = true;
         }
 
@@ -2023,6 +2073,20 @@
                 LEADERBOARD_COUNTS = counts || {};
             } catch (e) {
                 console.error('Lỗi tải bảng xếp hạng từ server:', e);
+            }
+        }
+
+        // Tập CCCD đã kích hoạt toàn đơn vị (tháng hiện tại) — để bảng tra cứu
+        // hiện "Đã kích hoạt" mà KHÔNG lộ ai kích. Mọi cán bộ đều tải được.
+        let ACTIVATED_CCCD_SET = new Set();
+        async function loadActivatedCccds() {
+            try {
+                const res = await fetch('/api/vneid/activated-cccds');
+                if (!res.ok) return;
+                const { cccds } = await res.json();
+                ACTIVATED_CCCD_SET = new Set(cccds || []);
+            } catch (e) {
+                console.error('Lỗi tải danh sách CCCD đã kích hoạt:', e);
             }
         }
 
@@ -2089,8 +2153,8 @@
                 return;
             }
 
-            // Nạp cán bộ đang đăng nhập + dữ liệu kích hoạt (tháng hiện tại) + bảng xếp hạng
-            await Promise.all([loadCurrentOfficer(), loadActivations(), loadLeaderboard()]);
+            // Nạp cán bộ đang đăng nhập + dữ liệu kích hoạt (tháng hiện tại) + bảng xếp hạng + CCCD đã kích toàn đơn vị
+            await Promise.all([loadCurrentOfficer(), loadActivations(), loadLeaderboard(), loadActivatedCccds()]);
             renderCurrentOfficerBanner();
 
             // Populate COL_IDX here!
@@ -2301,22 +2365,25 @@
                     }
                 }
 
-                // Check activation state dynamically
-                const isLocalActivated = ACTIVATION_LOGS[cleanCccd] !== undefined;
+                // Trạng thái kích hoạt:
+                // - isMineActivated: chính cán bộ này đã báo (có trong ACTIVATION_LOGS của mình)
+                // - isActivatedAnyone: đã được BẤT KỲ AI kích (có trong ACTIVATED_CCCD_SET) — ẩn tên người kích
+                const isMineActivated = ACTIVATION_LOGS[cleanCccd] !== undefined;
+                const isActivatedAnyone = isMineActivated || ACTIVATED_CCCD_SET.has(cleanCccd);
                 let actionButtonHtml = '';
 
-                if (isLocalActivated) {
-                    actionButtonHtml = `<button class="action-btn activated" onclick="event.stopPropagation(); startActivationByIndex(${globalIndex})">Đã báo cáo</button>`;
+                if (isActivatedAnyone) {
+                    actionButtonHtml = `<button class="action-btn activated" onclick="event.stopPropagation(); startActivationByIndex(${globalIndex})">Đã kích hoạt</button>`;
                 } else {
                     actionButtonHtml = `<button class="action-btn" onclick="event.stopPropagation(); startActivationByIndex(${globalIndex})">Báo cáo</button>`;
                 }
 
-                const nameCell = isLocalActivated
+                const nameCell = isActivatedAnyone
                     ? `<td style="font-weight: 600; color: #fff;"><span class="activated-check">✓</span>${getVal(row, 'Họ tên')}</td>`
                     : `<td style="font-weight: 600; color: #fff;">${getVal(row, 'Họ tên')}</td>`;
 
                 rowsHtml += `
-                    <tr class="${isLocalActivated ? 'row-activated' : ''}" onclick="showDetailsByIndex(${globalIndex})">
+                    <tr class="${isActivatedAnyone ? 'row-activated' : ''}" onclick="showDetailsByIndex(${globalIndex})">
                         ${nameCell}
                         <td style="font-family: monospace;">${cccdHtml}</td>
                         <td>${dob} ${ageStr}</td>

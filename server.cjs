@@ -1059,6 +1059,15 @@ app.get('/api/vneid/leaderboard', (req, res) => {
   res.json({ month, counts: countByOfficer });
 });
 
+// Danh sách CCCD đã kích hoạt (tháng hiện tại) — mọi cán bộ xem được để tránh báo trùng.
+// CHỈ trả mảng CCCD, KHÔNG kèm tên cán bộ nào kích (không lộ ai làm việc gì).
+app.get('/api/vneid/activated-cccds', (req, res) => {
+  if (!currentOfficer(req)) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : monthKey();
+  const cccds = readVneidActivations().filter((a) => a.month === month).map((a) => a.cccd);
+  res.json({ month, cccds });
+});
+
 // Xuất Excel danh sách kích hoạt. Client gửi rows (đã ghép tên/đội cán bộ +
 // tên/địa chỉ công dân từ data.js phía client), server dựng file .xlsx.
 // Bảo mật: CHỈ admin được xuất (chứa CCCD + tên công dân thật).
@@ -1165,6 +1174,33 @@ app.get('/api/vneid/admin/access-stats', (req, res) => {
     .filter((o) => !accessedNames.has(o.name))
     .map((o) => ({ officerName: o.name, team: o.team, group: o.group }));
   res.json({ accessed, neverAccessed });
+});
+
+// Mục 3: Dò trùng — CCCD nào bị nhiều bản ghi (cùng tháng). Về lý thuyết không có
+// (đã chống trùng bằng queue), nhưng cần công cụ kiểm tra dữ liệu đã ghi từ trước.
+app.get('/api/vneid/admin/duplicates', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Không có quyền truy cập' });
+  const all = readVneidActivations();
+  // Gom theo cccd + month
+  const groups = {};
+  all.forEach((a) => {
+    const key = `${a.cccd}|${a.month}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(a);
+  });
+  const duplicates = Object.entries(groups)
+    .filter(([, arr]) => arr.length > 1)
+    .map(([key, arr]) => {
+      const [cccd, month] = key.split('|');
+      return {
+        cccd,
+        month,
+        count: arr.length,
+        officers: arr.map((a) => ({ officerName: a.officerName, timestamp: a.timestamp })),
+      };
+    })
+    .sort((a, b) => b.count - a.count);
+  res.json({ totalRecords: all.length, duplicateCount: duplicates.length, duplicates });
 });
 
 // ── VNeID gate: chặn /vneid và /vneid/* (gồm data.js) khi chưa đăng nhập ────────
