@@ -8,4 +8,5 @@ vneid-activations.json
 vneid-issues.json
 vneid-secret.txt
 vneid-access-log.json
+vneid-badge-overrides.json
 _testdata/

@@ -1712,6 +1712,61 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Mục 5: Quản lý số hiệu cán bộ -->
+                <div class="admin-accordion" id="acc-badges">
+                    <div class="admin-accordion-header" onclick="toggleAccordion('acc-badges')">
+                        <h3>Mục 5 — Quản lý số hiệu cán bộ (tra cứu &amp; sửa)</h3>
+                        <span class="admin-accordion-arrow">▼</span>
+                    </div>
+                    <div class="admin-accordion-body">
+                        <div class="form-group" style="margin-bottom:12px;">
+                            <input type="text" id="admin-badge-search" class="input-control" placeholder="Lọc theo tên cán bộ..." oninput="filterBadgeTable()">
+                        </div>
+                        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">Sửa số hiệu trên web có hiệu lực ngay. Ô viền vàng = đã sửa khác với file gốc.</p>
+                        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                            <table class="admin-log-table" id="admin-badges-table">
+                                <thead><tr>
+                                    <th>Cán bộ</th>
+                                    <th>Đội</th>
+                                    <th>Số hiệu</th>
+                                    <th></th>
+                                </tr></thead>
+                                <tbody id="admin-badges-body">
+                                    <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:30px;">Đang tải...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mục 6: Xóa công dân đã báo cáo kích hoạt -->
+                <div class="admin-accordion" id="acc-del">
+                    <div class="admin-accordion-header" onclick="toggleAccordion('acc-del')">
+                        <h3>Mục 6 — Xóa công dân đã báo cáo kích hoạt</h3>
+                        <span class="admin-accordion-arrow">▼</span>
+                    </div>
+                    <div class="admin-accordion-body">
+                        <p id="admin-del-summary" style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:12px;">Đang tải...</p>
+                        <div class="form-group" style="margin-bottom:12px;">
+                            <input type="text" id="admin-del-search" class="input-control" placeholder="Lọc theo CCCD, tên công dân hoặc cán bộ..." oninput="filterDelTable()">
+                        </div>
+                        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                            <table class="admin-log-table" id="admin-del-table">
+                                <thead><tr>
+                                    <th>Công dân</th>
+                                    <th>Số CCCD</th>
+                                    <th>Cán bộ báo cáo</th>
+                                    <th>Thời điểm</th>
+                                    <th></th>
+                                </tr></thead>
+                                <tbody id="admin-del-body">
+                                    <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:30px;">Đang tải...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -2045,7 +2100,126 @@
                 console.error('Lỗi tải kiểm tra trùng:', e);
             }
 
+            // Mục 5: Quản lý số hiệu
+            await loadAdminBadges();
+            // Mục 6: Danh sách công dân đã báo cáo (để xóa)
+            await loadAdminDeletable();
+
             adminDataLoaded = true;
+        }
+
+        // ── Mục 5: Quản lý số hiệu cán bộ ────────────────────────────────────
+        let ADMIN_OFFICERS = [];
+        async function loadAdminBadges() {
+            try {
+                const res = await fetch('/api/vneid/admin/officers');
+                if (!res.ok) return;
+                const { officers } = await res.json();
+                ADMIN_OFFICERS = officers || [];
+                renderAdminBadges();
+            } catch (e) { console.error('Lỗi tải danh sách số hiệu:', e); }
+        }
+        function renderAdminBadges() {
+            const kw = (document.getElementById('admin-badge-search').value || '').toLowerCase();
+            const list = kw ? ADMIN_OFFICERS.filter(o => normName(o.name).includes(normName(kw))) : ADMIN_OFFICERS;
+            const body = document.getElementById('admin-badges-body');
+            body.innerHTML = list.length ? list.map(o => `
+                <tr>
+                    <td style="font-weight:600;color:#fff;">${o.name}</td>
+                    <td style="color:var(--text-secondary);">${o.team||'—'}</td>
+                    <td>
+                        <input type="text" value="${o.badge}" data-name="${o.name.replace(/"/g,'&quot;')}"
+                            class="input-control admin-badge-input" style="width:110px;padding:6px 10px;font-family:monospace;${o.overridden?'border-color:var(--accent-amber);':''}"
+                            title="${o.overridden?('Đã sửa. Số gốc trong file: '+o.repoBadge):'Số hiệu gốc'}">
+                    </td>
+                    <td><button class="action-btn" style="background:var(--primary);padding:6px 12px;" onclick="saveBadge(this)">Lưu</button></td>
+                </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Không có cán bộ khớp</td></tr>';
+        }
+        function filterBadgeTable() { renderAdminBadges(); }
+        async function saveBadge(btn) {
+            const tr = btn.closest('tr');
+            const input = tr.querySelector('.admin-badge-input');
+            const name = input.getAttribute('data-name');
+            const badge = input.value.replace(/\D/g, '');
+            if (!/^\d{4,8}$/.test(badge)) { alert('Số hiệu phải gồm 4-8 chữ số.'); return; }
+            if (!confirm(`Đổi số hiệu của "${name}" thành ${badge}?`)) return;
+            btn.disabled = true; btn.textContent = '...';
+            try {
+                const res = await fetch('/api/vneid/admin/set-badge', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, badge })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) { alert(data.error || 'Lỗi lưu số hiệu.'); return; }
+                // Cập nhật local + báo thành công
+                const off = ADMIN_OFFICERS.find(o => o.name === name);
+                if (off) { off.badge = data.badge; off.overridden = data.overridden; }
+                renderAdminBadges();
+                alert(`Đã cập nhật số hiệu "${name}" = ${data.badge}. Có hiệu lực ngay.`);
+            } catch (_e) { alert('Lỗi kết nối.'); }
+            finally { btn.disabled = false; btn.textContent = 'Lưu'; }
+        }
+
+        // ── Mục 6: Xóa công dân đã báo cáo kích hoạt ─────────────────────────
+        let ADMIN_DELETABLE = [];
+        async function loadAdminDeletable() {
+            try {
+                // Admin: /activations trả toàn bộ (isAdmin=true)
+                const res = await fetch('/api/vneid/activations');
+                if (!res.ok) return;
+                const { activations } = await res.json();
+                // Ghép tên + địa chỉ công dân từ RESIDENT_DATA
+                const cccdMap = {};
+                if (typeof RESIDENT_DATA !== 'undefined') {
+                    RESIDENT_DATA.forEach(row => {
+                        const c = getVal(row, 'Số CCCD/ĐDCD');
+                        const clean = c.endsWith('*') ? c.slice(0, -1) : c;
+                        cccdMap[clean] = getVal(row, 'Họ tên');
+                    });
+                }
+                ADMIN_DELETABLE = (activations || []).map(a => ({
+                    cccd: a.cccd, month: a.month, officerName: a.officerName,
+                    timestamp: a.timestamp, residentName: cccdMap[a.cccd] || 'Không rõ'
+                })).sort((x, y) => (y.timestamp || '').localeCompare(x.timestamp || ''));
+                renderAdminDeletable();
+            } catch (e) { console.error('Lỗi tải danh sách xóa:', e); }
+        }
+        function renderAdminDeletable() {
+            const kw = (document.getElementById('admin-del-search').value || '').toLowerCase();
+            const list = kw ? ADMIN_DELETABLE.filter(a =>
+                a.cccd.includes(kw) || a.residentName.toLowerCase().includes(kw) || a.officerName.toLowerCase().includes(kw)
+            ) : ADMIN_DELETABLE;
+            document.getElementById('admin-del-summary').innerHTML =
+                `Tổng <b style="color:var(--accent-cyan);">${ADMIN_DELETABLE.length}</b> công dân đã được báo cáo kích hoạt. Xóa sẽ giải phóng chỉ tiêu của cán bộ tương ứng.`;
+            const body = document.getElementById('admin-del-body');
+            body.innerHTML = list.length ? list.map(a => `
+                <tr>
+                    <td style="font-weight:600;color:#fff;">${a.residentName}</td>
+                    <td style="font-family:monospace;">${a.cccd}</td>
+                    <td style="color:var(--text-secondary);">${a.officerName}</td>
+                    <td style="color:var(--text-muted);font-size:0.8rem;white-space:nowrap;">${fmtTime(a.timestamp)}</td>
+                    <td><button class="action-btn" style="background:rgba(244,63,94,0.15);border-color:rgba(244,63,94,0.4);color:var(--accent-rose);padding:6px 12px;"
+                        onclick="deleteActivation(this,'${a.cccd}','${a.month}','${a.residentName.replace(/'/g,"\\'")}')">Xóa</button></td>
+                </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Không có bản ghi khớp</td></tr>';
+        }
+        function filterDelTable() { renderAdminDeletable(); }
+        async function deleteActivation(btn, cccd, month, residentName) {
+            if (!confirm(`Xóa báo cáo kích hoạt của công dân "${residentName}" (CCCD ${cccd})?\n\nCán bộ đã báo sẽ mất 1 chỉ tiêu. Không thể hoàn tác.`)) return;
+            btn.disabled = true; btn.textContent = '...';
+            try {
+                const res = await fetch('/api/vneid/admin/delete-activation', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cccd, month })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) { alert(data.error || 'Lỗi xóa.'); btn.disabled = false; btn.textContent = 'Xóa'; return; }
+                // Bỏ khỏi danh sách local + reload các số liệu liên quan
+                ADMIN_DELETABLE = ADMIN_DELETABLE.filter(a => !(a.cccd === cccd && a.month === month));
+                renderAdminDeletable();
+                await Promise.all([loadActivations(), loadLeaderboard(), loadActivatedCccds()]);
+                updateGlobalStats(); renderTable(); renderOfficersList();
+                alert('Đã xóa bản ghi kích hoạt.');
+            } catch (_e) { alert('Lỗi kết nối.'); btn.disabled = false; btn.textContent = 'Xóa'; }
         }
 
         async function loadActivations() {

@@ -18,6 +18,9 @@ const workProgressFile = path.join(DATA_DIR, 'work-progress-reports.json');
 const vneidActivationsFile = path.join(DATA_DIR, 'vneid-activations.json');
 const vneidIssuesFile = path.join(DATA_DIR, 'vneid-issues.json');
 const vneidAccessLogFile = path.join(DATA_DIR, 'vneid-access-log.json');
+// Override số hiệu do admin sửa trên web — lưu Volume, đè lên file repo lúc khởi động.
+// Cấu trúc: { "<nameKey>": "<badgeDigits>" }
+const vneidBadgeOverridesFile = path.join(DATA_DIR, 'vneid-badge-overrides.json');
 
 // Admin name key (không dấu, lowercase, không cấp bậc)
 const VNEID_ADMIN_KEY = 'do duc thang';
@@ -94,23 +97,47 @@ const normOfficerName = (raw) => {
 };
 const badgeDigits = (raw) => String(raw || '').replace(/\D/g, '');
 
-// Nạp danh sách cán bộ + số hiệu 1 lần lúc khởi động
+// Đọc override số hiệu do admin sửa trên web (lưu Volume)
+const readBadgeOverrides = () => {
+  if (!fs.existsSync(vneidBadgeOverridesFile)) return {};
+  try { return JSON.parse(fs.readFileSync(vneidBadgeOverridesFile, 'utf8')) || {}; }
+  catch { return {}; }
+};
+const writeBadgeOverrides = (data) => {
+  const tempFile = `${vneidBadgeOverridesFile}.${process.pid}.tmp`;
+  fs.writeFileSync(tempFile, JSON.stringify(data, null, 2));
+  fs.renameSync(tempFile, vneidBadgeOverridesFile);
+};
+
+// Nạp danh sách cán bộ + số hiệu; áp override từ Volume đè lên file repo.
+// Gọi lúc khởi động và mỗi khi admin sửa số hiệu (không cần restart).
 let VNEID_OFFICERS = [];
 const OFFICERS_BADGE_FILE = path.join(__dirname, 'officers-badges.json');
-try {
-  const rawList = JSON.parse(fs.readFileSync(OFFICERS_BADGE_FILE, 'utf8'));
-  VNEID_OFFICERS = rawList.map((o) => ({
-    name: o.name,
-    team: o.team || '',
-    group: o.group || '',
-    position: o.position || '',
-    nameKey: normOfficerName(o.name),
-    badgeKey: badgeDigits(o.badgeDigits || o.badge),
-  }));
-  console.log(`VNeID: loaded ${VNEID_OFFICERS.length} officers`);
-} catch (err) {
-  console.error('VNeID: cannot load officers-badges.json —', err.message);
-}
+const loadOfficers = () => {
+  try {
+    const rawList = JSON.parse(fs.readFileSync(OFFICERS_BADGE_FILE, 'utf8'));
+    const overrides = readBadgeOverrides();
+    VNEID_OFFICERS = rawList.map((o) => {
+      const nameKey = normOfficerName(o.name);
+      const repoBadge = badgeDigits(o.badgeDigits || o.badge);
+      const badgeKey = overrides[nameKey] ? badgeDigits(overrides[nameKey]) : repoBadge;
+      return {
+        name: o.name,
+        team: o.team || '',
+        group: o.group || '',
+        position: o.position || '',
+        nameKey,
+        badgeKey,
+        repoBadge,                       // số hiệu gốc trong repo (để so lệch)
+        overridden: Boolean(overrides[nameKey] && badgeDigits(overrides[nameKey]) !== repoBadge),
+      };
+    });
+    console.log(`VNeID: loaded ${VNEID_OFFICERS.length} officers (${Object.keys(overrides).length} override)`);
+  } catch (err) {
+    console.error('VNeID: cannot load officers-badges.json —', err.message);
+  }
+};
+loadOfficers();
 const findOfficer = (name, badge) => {
   const nk = normOfficerName(name);
   const bk = badgeDigits(badge);
@@ -1201,6 +1228,69 @@ app.get('/api/vneid/admin/duplicates', (req, res) => {
     })
     .sort((a, b) => b.count - a.count);
   res.json({ totalRecords: all.length, duplicateCount: duplicates.length, duplicates });
+});
+
+// Mục 5a: Danh sách cán bộ + số hiệu (để admin tra cứu/sửa)
+app.get('/api/vneid/admin/officers', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Không có quyền truy cập' });
+  const officers = VNEID_OFFICERS
+    .map((o) => ({
+      name: o.name,
+      team: o.team,
+      group: o.group,
+      position: o.position,
+      badge: o.badgeKey,
+      repoBadge: o.repoBadge,
+      overridden: o.overridden,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  res.json({ officers });
+});
+
+// Mục 5b: Set lại số hiệu cho 1 cán bộ (lưu Volume override, hiệu lực ngay, không cần deploy)
+app.post('/api/vneid/admin/set-badge', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Không có quyền truy cập' });
+  const name = String(req.body?.name || '').trim();
+  const newBadge = badgeDigits(req.body?.badge);
+  if (!name) return res.status(400).json({ error: 'Thiếu tên cán bộ' });
+  if (!/^\d{4,8}$/.test(newBadge)) return res.status(400).json({ error: 'Số hiệu phải gồm 4-8 chữ số' });
+
+  const nameKey = normOfficerName(name);
+  const officer = VNEID_OFFICERS.find((o) => o.nameKey === nameKey);
+  if (!officer) return res.status(404).json({ error: 'Không tìm thấy cán bộ' });
+
+  const overrides = readBadgeOverrides();
+  if (newBadge === officer.repoBadge) {
+    // Bằng số gốc repo → xóa override cho sạch
+    delete overrides[nameKey];
+  } else {
+    overrides[nameKey] = newBadge;
+  }
+  writeBadgeOverrides(overrides);
+  loadOfficers();   // nạp lại danh sách trong RAM — hiệu lực ngay
+  const updated = VNEID_OFFICERS.find((o) => o.nameKey === nameKey);
+  res.json({ ok: true, name: updated.name, badge: updated.badgeKey, overridden: updated.overridden });
+});
+
+// Mục 6: Xóa 1 bản ghi công dân đã kích hoạt (theo cccd + month). Admin dùng khi báo nhầm.
+app.post('/api/vneid/admin/delete-activation', async (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Không có quyền truy cập' });
+  const cccd = String(req.body?.cccd || '').replace(/\D/g, '');
+  const month = /^\d{4}-\d{2}$/.test(req.body?.month || '') ? req.body.month : monthKey();
+  if (!/^\d{12}$/.test(cccd)) return res.status(400).json({ error: 'Số CCCD phải gồm 12 chữ số' });
+  try {
+    const result = await updateVneidActivations((all) => {
+      const idx = all.findIndex((a) => a.cccd === cccd && a.month === month);
+      if (idx === -1) return { changed: false, data: all, removed: null };
+      const [removed] = all.splice(idx, 1);
+      return { changed: true, data: all, removed };
+    });
+    if (!result.removed) return res.status(404).json({ error: 'Không tìm thấy bản ghi kích hoạt' });
+    res.json({ ok: true, removed: result.removed });
+  } catch (err) {
+    console.error('VNeID delete activation failed:', err);
+    res.status(500).json({ error: 'Không xóa được bản ghi' });
+  }
 });
 
 // ── VNeID gate: chặn /vneid và /vneid/* (gồm data.js) khi chưa đăng nhập ────────
