@@ -3030,6 +3030,39 @@
             const chartLabels = top15.map(item => item['Đơn vị']);
             const chartM2Data = top15.map(item => parseInt(item['Chưa kích hoạt Mức 2']));
 
+            const isMobileChart = window.matchMedia('(max-width: 600px)').matches;
+
+            // Plugin vẽ số liệu ở cuối mỗi thanh bar ngang
+            const barValueLabelPlugin = {
+                id: 'barValueLabel',
+                afterDatasetsDraw(chart) {
+                    const { ctx } = chart;
+                    const meta = chart.getDatasetMeta(0);
+                    ctx.save();
+                    ctx.font = `700 ${isMobileChart ? 10 : 12}px Outfit, sans-serif`;
+                    ctx.textBaseline = 'middle';
+                    meta.data.forEach((bar, i) => {
+                        const val = chart.data.datasets[0].data[i];
+                        if (val === null || val === undefined) return;
+                        const txt = Number(val).toLocaleString();
+                        const textW = ctx.measureText(txt).width;
+                        // Nếu thanh đủ dài, vẽ số bên trong (căn phải, chữ trắng);
+                        // nếu quá ngắn, vẽ ra ngoài bên phải (chữ hồng)
+                        const barLen = bar.x - bar.base;
+                        if (barLen > textW + 12) {
+                            ctx.fillStyle = '#fff';
+                            ctx.textAlign = 'right';
+                            ctx.fillText(txt, bar.x - 6, bar.y);
+                        } else {
+                            ctx.fillStyle = '#f43f5e';
+                            ctx.textAlign = 'left';
+                            ctx.fillText(txt, bar.x + 6, bar.y);
+                        }
+                    });
+                    ctx.restore();
+                }
+            };
+
             chartCommunes = new Chart(document.getElementById('chart-backlog-communes').getContext('2d'), {
                 type: 'bar',
                 data: {
@@ -3047,19 +3080,45 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     indexAxis: 'y',
+                    // Chừa chỗ bên phải để số vẽ ngoài thanh không bị cắt
+                    layout: { padding: { right: isMobileChart ? 34 : 44 } },
                     scales: {
                         x: {
                             grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                            title: { display: true, text: 'Số lượng hồ sơ tồn đọng' }
+                            title: { display: !isMobileChart, text: 'Số lượng hồ sơ tồn đọng' },
+                            ticks: { font: { size: isMobileChart ? 9 : 11 } }
                         },
                         y: {
-                            grid: { display: false }
+                            grid: { display: false },
+                            // Không cắt/bỏ tên xã: hiện đủ mọi nhãn, cho phép xuống dòng
+                            ticks: {
+                                autoSkip: false,
+                                crossAlign: 'far',
+                                font: { size: isMobileChart ? 10 : 12 },
+                                callback: function(value) {
+                                    const label = this.getLabelForValue(value);
+                                    // Trên mobile: cắt nhãn quá dài thành 2 dòng để không bị mất chữ
+                                    if (isMobileChart && label.length > 12) {
+                                        const words = label.split(' ');
+                                        const lines = [];
+                                        let cur = '';
+                                        words.forEach(w => {
+                                            if ((cur + ' ' + w).trim().length > 12) { lines.push(cur.trim()); cur = w; }
+                                            else { cur = (cur + ' ' + w).trim(); }
+                                        });
+                                        if (cur) lines.push(cur.trim());
+                                        return lines;
+                                    }
+                                    return label;
+                                }
+                            }
                         }
                     },
                     plugins: {
                         legend: { display: false }
                     }
-                }
+                },
+                plugins: [barValueLabelPlugin]
             });
 
             // Chart 2: Age groups for remaining unactivated M2
