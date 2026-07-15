@@ -1903,6 +1903,11 @@
                         <div id="act-officer-quota-container"></div>
                     </div>
 
+                    <div class="form-group" id="act-date-group">
+                        <label for="act-date">Ngày kích hoạt <span style="color:var(--accent-rose);">*</span></label>
+                        <input type="date" id="act-date" class="input-control" style="font-family: var(--font-main);">
+                    </div>
+
                     <!-- Chế độ chọn: thành công / báo lỗi -->
                     <div id="act-mode-choose" style="display: flex; gap: 12px; margin-top: 6px;">
                         <button class="action-btn" id="act-confirm-btn" style="flex:1; background: var(--accent-emerald); border-color: var(--accent-emerald);" onclick="confirmActivation()">✓ Kích hoạt thành công</button>
@@ -2742,6 +2747,14 @@
             document.getElementById('act-resident-meta').innerText = `CCCD: ${cccd} | Xã/Thị trấn: ${commune}`;
             document.getElementById('act-officer-name').innerText = CURRENT_OFFICER ? CURRENT_OFFICER.name : '—';
             updateOfficerQuotaInfo();
+            // Đặt ngày kích hoạt mặc định = hôm nay (định dạng YYYY-MM-DD cho input date)
+            const dateEl = document.getElementById('act-date');
+            if (dateEl) {
+                const now = new Date();
+                const pad = (n) => String(n).padStart(2, '0');
+                dateEl.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+                dateEl.max = dateEl.value;   // không cho chọn ngày tương lai
+            }
             // Reset về chế độ chọn (ẩn form báo lỗi)
             hideIssueForm();
             document.getElementById('act-issue-text').value = '';
@@ -2842,6 +2855,14 @@
             }
             const officerName = CURRENT_OFFICER.name;
 
+            // Bắt buộc nhập ngày kích hoạt
+            const activationDate = document.getElementById('act-date').value;
+            if (!activationDate) {
+                alert('Vui lòng nhập ngày kích hoạt.');
+                document.getElementById('act-date').focus();
+                return;
+            }
+
             const btn = document.getElementById('act-confirm-btn');
             if (btn) { btn.disabled = true; btn.textContent = 'Đang lưu...'; }
 
@@ -2849,7 +2870,7 @@
                 const res = await fetch('/api/vneid/activations', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cccd: pendingActCccd })
+                    body: JSON.stringify({ cccd: pendingActCccd, activationDate })
                 });
                 if (!res.ok) {
                     if (res.status === 401) {

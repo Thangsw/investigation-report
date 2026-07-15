@@ -1050,6 +1050,16 @@ app.post('/api/vneid/activations', async (req, res) => {
   const cccd = String(req.body?.cccd || '').replace(/\D/g, '');
   if (!/^\d{12}$/.test(cccd)) return res.status(400).json({ error: 'Số CCCD phải gồm 12 chữ số' });
 
+  // Ngày kích hoạt do cán bộ nhập (YYYY-MM-DD). Bắt buộc, không cho ngày tương lai.
+  const activationDate = String(req.body?.activationDate || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(activationDate)) {
+    return res.status(400).json({ error: 'Ngày kích hoạt không hợp lệ (định dạng YYYY-MM-DD)' });
+  }
+  const parsedDate = new Date(activationDate + 'T00:00:00');
+  if (isNaN(parsedDate.getTime())) {
+    return res.status(400).json({ error: 'Ngày kích hoạt không hợp lệ' });
+  }
+
   const month = monthKey();
   try {
     const result = await updateVneidActivations((all) => {
@@ -1060,6 +1070,7 @@ app.post('/api/vneid/activations', async (req, res) => {
         cccd,
         officerName: officer.name,   // lấy từ cookie, không tin client
         month,
+        activationDate,              // ngày kích hoạt do cán bộ nhập
         timestamp: new Date().toISOString(),
       };
       return { changed: true, data: [...all, entry], entry, created: true };
