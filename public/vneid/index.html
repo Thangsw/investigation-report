@@ -2967,9 +2967,10 @@
                 const card = document.createElement('div');
                 card.className = 'officer-card' + (isMet ? ' officer-card-met' : '');
 
-                // Chỉ admin mới bấm tên xem được danh sách công dân thật
-                const nameHtml = admin
-                    ? `<div class="officer-name officer-name-link" onclick="event.stopPropagation(); showOfficerActivations('${officer.name.replace(/'/g, "\\'")}')" title="Bấm để xem danh sách công dân đã kích hoạt">${officer.name}</div>`
+                // Bấm tên xem danh sách công dân: admin (mọi cán bộ) hoặc chính mình
+                const isSelf = CURRENT_OFFICER && officer.name === CURRENT_OFFICER.name;
+                const nameHtml = (admin || isSelf)
+                    ? `<div class="officer-name officer-name-link" onclick="event.stopPropagation(); showOfficerActivations('${officer.name.replace(/'/g, "\\'")}')" title="Bấm để xem${isSelf && !admin ? ' và xóa' : ''} danh sách công dân đã kích hoạt">${officer.name}</div>`
                     : `<div class="officer-name">${officer.name}</div>`;
 
                 card.innerHTML = `
