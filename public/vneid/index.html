@@ -1960,6 +1960,7 @@
                             <th>Số CCCD</th>
                             <th>Địa chỉ</th>
                             <th>Thời điểm</th>
+                            <th id="officer-list-del-col" style="display:none;">Xóa</th>
                         </tr></thead>
                         <tbody id="officer-list-body"></tbody>
                     </table>
@@ -3039,22 +3040,56 @@
         // Bấm tên cán bộ ở tab tiến độ -> hiện danh sách công dân cán bộ đó đã kích hoạt
         window.showOfficerActivations = function(officerName) {
             const rows = buildActivationRows().filter(r => r.officerName === officerName);
+            const admin = isCurrentOfficerAdmin();
             document.getElementById('officer-list-title').innerText = `Danh sách kích hoạt — ${officerName}`;
             document.getElementById('officer-list-sub').innerText =
-                rows.length ? `Tổng cộng ${rows.length} công dân đã kích hoạt` : 'Cán bộ này chưa kích hoạt cho công dân nào.';
+                rows.length ? `Tổng cộng ${rows.length} công dân đã kích hoạt${admin ? ' — bấm Xóa để gỡ báo cáo nhầm' : ''}` : 'Cán bộ này chưa kích hoạt cho công dân nào.';
+            // Hiện/ẩn cột Xóa theo quyền admin
+            document.getElementById('officer-list-del-col').style.display = admin ? '' : 'none';
+            const colspan = admin ? 6 : 5;
             const body = document.getElementById('officer-list-body');
-            body.innerHTML = rows.length
-                ? rows.map((r, i) => `
+            if (!rows.length) {
+                body.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;color:var(--text-muted);padding:30px;">Chưa có dữ liệu</td></tr>`;
+            } else {
+                body.innerHTML = rows.map((r, i) => `
                     <tr>
                         <td style="text-align:center;">${i + 1}</td>
                         <td style="font-weight:600;color:#fff;">${r.residentName}</td>
                         <td style="font-family:monospace;">${r.cccd}</td>
                         <td style="color:var(--text-secondary);font-size:0.82rem;">${r.address}</td>
                         <td style="color:var(--text-secondary);font-size:0.8rem;white-space:nowrap;">${fmtTimestamp(r.timestamp)}</td>
-                    </tr>`).join('')
-                : '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:30px;">Chưa có dữ liệu</td></tr>';
+                        ${admin ? `<td><button class="action-btn officer-list-del-btn" data-cccd="${r.cccd}" data-month="${r.month || ''}" data-name="${r.residentName.replace(/"/g,'&quot;')}" style="background:rgba(244,63,94,0.15);border-color:rgba(244,63,94,0.4);color:var(--accent-rose);padding:6px 12px;">Xóa</button></td>` : ''}
+                    </tr>`).join('');
+                // Gán event bằng addEventListener (an toàn với tên tiếng Việt, tránh lỗi escape onclick inline)
+                if (admin) {
+                    body.querySelectorAll('.officer-list-del-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            deleteActivationFromModal(btn, btn.dataset.cccd, btn.dataset.month, btn.dataset.name, officerName);
+                        });
+                    });
+                }
+            }
             document.getElementById('officer-list-modal').classList.add('active');
         };
+
+        // Xóa 1 bản ghi từ modal danh sách cán bộ, xong thì cập nhật lại modal + số liệu
+        async function deleteActivationFromModal(btn, cccd, month, residentName, officerName) {
+            if (!confirm(`Xóa báo cáo kích hoạt của công dân "${residentName}" (CCCD ${cccd})?\n\nCán bộ ${officerName} sẽ mất 1 chỉ tiêu. Không thể hoàn tác.`)) return;
+            btn.disabled = true; btn.textContent = '...';
+            try {
+                const res = await fetch('/api/vneid/admin/delete-activation', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cccd, month: month || undefined })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) { alert(data.error || 'Lỗi xóa.'); btn.disabled = false; btn.textContent = 'Xóa'; return; }
+                // Cập nhật dữ liệu rồi vẽ lại modal + các bảng liên quan
+                await Promise.all([loadActivations(), loadLeaderboard(), loadActivatedCccds()]);
+                if (Array.isArray(ADMIN_DELETABLE)) ADMIN_DELETABLE = ADMIN_DELETABLE.filter(a => !(a.cccd === cccd && a.month === month));
+                updateGlobalStats(); renderTable(); renderOfficersList();
+                showOfficerActivations(officerName);   // vẽ lại danh sách của cán bộ này
+            } catch (_e) { alert('Lỗi kết nối.'); btn.disabled = false; btn.textContent = 'Xóa'; }
+        }
 
         // Export text report
         function exportTextReport() {
