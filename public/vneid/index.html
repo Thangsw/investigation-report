@@ -2240,7 +2240,7 @@
                 const { activations } = await res.json();
                 ACTIVATION_LOGS = {};
                 (activations || []).forEach(a => {
-                    ACTIVATION_LOGS[a.cccd] = { officerName: a.officerName, timestamp: a.timestamp };
+                    ACTIVATION_LOGS[a.cccd] = { officerName: a.officerName, timestamp: a.timestamp, activationDate: a.activationDate || '' };
                 });
             } catch (e) {
                 console.error('Lỗi tải dữ liệu kích hoạt từ server:', e);
@@ -3032,14 +3032,17 @@
                     residentName: resident.name,
                     cccd,
                     address: resident.address,
+                    activationDate: log.activationDate || '',
                     timestamp: log.timestamp,
                 });
             });
 
-            // Xếp theo tên cán bộ, rồi theo thời điểm kích hoạt
+            // Xếp theo tên cán bộ, rồi theo ngày kích hoạt (rồi thời điểm ghi)
             rows.sort((a, b) => {
                 const c = a.officerName.localeCompare(b.officerName, 'vi');
                 if (c !== 0) return c;
+                const d = (a.activationDate || '').localeCompare(b.activationDate || '');
+                if (d !== 0) return d;
                 return (a.timestamp || '').localeCompare(b.timestamp || '');
             });
             return rows;
@@ -3052,11 +3055,17 @@
                 alert('Chưa có dữ liệu kích hoạt để xuất.');
                 return;
             }
+            // Tiêu đề theo tháng hiện tại + tên đơn vị của cán bộ đang đăng nhập
+            const now = new Date();
+            const title = `KÍCH HOẠT ĐỊNH DANH MỨC 2 THÁNG ${now.getMonth() + 1}/${now.getFullYear()}`;
+            const unit = (CURRENT_OFFICER && CURRENT_OFFICER.group)
+                ? `TỔ CÔNG TÁC ${String(CURRENT_OFFICER.group).toUpperCase()}`
+                : 'TỔ CÔNG TÁC ĐỊA BÀN';
             try {
                 const res = await fetch('/api/vneid/activations/export', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ rows }),
+                    body: JSON.stringify({ rows, title, unit }),
                 });
                 if (!res.ok) { alert('Không xuất được Excel. Vui lòng thử lại.'); return; }
                 const blob = await res.blob();

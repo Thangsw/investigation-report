@@ -1108,8 +1108,9 @@ app.get('/api/vneid/activated-cccds', (req, res) => {
   res.json({ month, cccds });
 });
 
-// Xuất Excel danh sách kích hoạt. Client gửi rows (đã ghép tên/đội cán bộ +
-// tên/địa chỉ công dân từ data.js phía client), server dựng file .xlsx.
+// Xuất Excel danh sách kích hoạt THEO ĐÚNG MẪU BÁO CÁO của cậu chủ.
+// Client gửi rows (đã ghép tên/đội cán bộ + tên công dân + ngày kích hoạt),
+// server nhóm theo cán bộ, gộp ô (merge) cột STT + tên cán bộ, mỗi công dân 1 dòng.
 // Bảo mật: CHỈ admin được xuất (chứa CCCD + tên công dân thật).
 app.post('/api/vneid/activations/export', (req, res) => {
   const officer = currentOfficer(req);
@@ -1117,24 +1118,75 @@ app.post('/api/vneid/activations/export', (req, res) => {
   if (officer.nameKey !== VNEID_ADMIN_KEY) return res.status(403).json({ error: 'Không có quyền xuất dữ liệu' });
   try {
     const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
-    const header = ['STT', 'Tên cán bộ', 'Đội', 'Công dân kích hoạt được', 'Số CCCD', 'Địa chỉ'];
-    const aoa = [header];
-    rows.forEach((r, i) => {
-      aoa.push([
-        i + 1,
-        String(r.officerName || ''),
-        String(r.team || ''),
-        String(r.residentName || ''),
-        String(r.cccd || ''),
-        String(r.address || ''),
-      ]);
+    const unit = String(req.body?.unit || 'TỔ CÔNG TÁC ĐỊA BÀN').trim();
+    const title = String(req.body?.title || 'KÍCH HOẠT ĐỊNH DANH MỨC 2').trim();
+
+    // Đổi 'YYYY-MM-DD' -> 'DD/MM/YYYY' cho dễ đọc (giữ nguyên nếu không đúng dạng)
+    const fmtDate = (s) => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : String(s || '');
+    };
+
+    // Nhóm bản ghi theo cán bộ, giữ thứ tự xuất hiện (client đã sắp xếp sẵn)
+    const groups = [];
+    const idxByOfficer = {};
+    rows.forEach((r) => {
+      const key = String(r.officerName || '');
+      if (!(key in idxByOfficer)) {
+        idxByOfficer[key] = groups.length;
+        groups.push({ officerName: key, team: String(r.team || ''), items: [] });
+      }
+      groups[idxByOfficer[key]].items.push(r);
     });
+
+    const HEADER_ROW = 5; // 0-based: dòng tiêu đề cột (STT | Họ và tên cán bộ | ...)
+    const aoa = [];
+    aoa.push([unit]);                              // dòng 1 (A1): tên tổ
+    aoa.push([]);                                  // dòng 2: trống
+    aoa.push([title]);                             // dòng 3: tiêu đề (merge A:G)
+    aoa.push([]);                                  // dòng 4: trống
+    aoa.push([]);                                  // dòng 5: trống (đệm cho đẹp)
+    aoa.push(['STT', 'Họ và tên cán bộ', 'STT', 'Họ tên tr/h kích hoạt', 'Số CCCD', 'Ngày kích hoạt', 'Ghi chú']);
+
+    const merges = [
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } }, // gộp ô tiêu đề chính qua 7 cột
+    ];
+
+    let officerNo = 0;
+    groups.forEach((g) => {
+      officerNo += 1;
+      const blockStart = aoa.length; // dòng đầu của khối cán bộ này (0-based)
+      g.items.forEach((it, i) => {
+        aoa.push([
+          i === 0 ? officerNo : '',
+          i === 0 ? g.officerName : '',
+          i + 1,
+          String(it.residentName || ''),
+          String(it.cccd || ''),
+          fmtDate(it.activationDate),
+          String(it.note || ''),
+        ]);
+      });
+      const blockEnd = aoa.length - 1;
+      if (blockEnd > blockStart) {
+        // Gộp dọc cột STT cán bộ (A) và tên cán bộ (B) qua toàn bộ công dân của họ
+        merges.push({ s: { r: blockStart, c: 0 }, e: { r: blockEnd, c: 0 } });
+        merges.push({ s: { r: blockStart, c: 1 }, e: { r: blockEnd, c: 1 } });
+      }
+    });
+
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{ wch: 5 }, { wch: 26 }, { wch: 18 }, { wch: 26 }, { wch: 16 }, { wch: 45 }];
+    ws['!merges'] = merges;
+    ws['!cols'] = [{ wch: 5 }, { wch: 26 }, { wch: 5 }, { wch: 26 }, { wch: 16 }, { wch: 14 }, { wch: 16 }];
+    // Ép cột CCCD (E) về dạng text để giữ số 0 đầu
+    for (let r = HEADER_ROW + 1; r < aoa.length; r += 1) {
+      const ref = XLSX.utils.encode_cell({ r, c: 4 });
+      if (ws[ref] && ws[ref].v != null && ws[ref].v !== '') ws[ref].t = 's';
+    }
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Kich hoat VNeID');
+    XLSX.utils.book_append_sheet(wb, ws, 'Kich hoat DDM2');
     const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    res.setHeader('Content-Disposition', 'attachment; filename="kich-hoat-vneid.xlsx"');
+    res.setHeader('Content-Disposition', 'attachment; filename="kich-hoat-dinh-danh-muc-2.xlsx"');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buf);
   } catch (err) {
