@@ -206,6 +206,136 @@ const updateVneidActivations = (updater) => {
   return operation;
 };
 
+// ── VNeID Google Sheets sync (real-time qua Apps Script web app) ───────────────
+// Đặt VNEID_SHEETS_WEBHOOK_URL (URL web app Apps Script) + VNEID_SHEETS_VIEW_URL
+// (URL xem trang tính) trong Railway Variables để bật. Mỗi lần cán bộ nhập/xóa
+// kích hoạt, server đẩy TOÀN BỘ dữ liệu tháng hiện tại lên trang tính (Apps Script
+// ghi đè), nên xóa cũng phản ánh được — đúng như tab báo cáo tiến độ bên /hs.
+const VNEID_SHEETS_WEBHOOK = process.env.VNEID_SHEETS_WEBHOOK_URL || '';
+const VNEID_SHEETS_VIEW_URL = process.env.VNEID_SHEETS_VIEW_URL || '';
+
+// Dựng bảng 2 chiều (aoa) + danh sách ô gộp (merges, dạng XLSX 0-based) theo ĐÚNG
+// mẫu báo cáo: dòng đơn vị, dòng tiêu đề (gộp 7 cột), header, rồi từng khối cán bộ
+// (gộp dọc cột STT + tên cán bộ). Dùng chung cho cả xuất Excel và sync Google Sheet.
+function buildActivationAoa(rows, opts = {}) {
+  const unit = String(opts.unit || 'TỔ CÔNG TÁC ĐỊNH DANH ĐIỆN TỬ').trim();
+  const title = String(opts.title || 'KÍCH HOẠT ĐỊNH DANH MỨC 2').trim();
+  const fmtDate = (s) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : String(s || '');
+  };
+  // Nhóm theo cán bộ, giữ thứ tự xuất hiện
+  const groups = [];
+  const idxByOfficer = {};
+  (rows || []).forEach((r) => {
+    const key = String(r.officerName || '');
+    if (!(key in idxByOfficer)) {
+      idxByOfficer[key] = groups.length;
+      groups.push({ officerName: key, items: [] });
+    }
+    groups[idxByOfficer[key]].items.push(r);
+  });
+
+  const aoa = [];
+  aoa.push([unit]);
+  aoa.push([]);
+  aoa.push([title]);
+  aoa.push([]);
+  aoa.push([]);
+  const headerRow = aoa.length; // 0-based index của dòng header cột
+  aoa.push(['STT', 'Họ và tên cán bộ', 'STT', 'Họ tên tr/h kích hoạt', 'Số CCCD', 'Ngày kích hoạt', 'Ghi chú']);
+
+  const merges = [{ s: { r: 2, c: 0 }, e: { r: 2, c: 6 } }];
+  let officerNo = 0;
+  groups.forEach((g) => {
+    officerNo += 1;
+    const blockStart = aoa.length;
+    g.items.forEach((it, i) => {
+      aoa.push([
+        i === 0 ? officerNo : '',
+        i === 0 ? g.officerName : '',
+        i + 1,
+        String(it.residentName || ''),
+        String(it.cccd || ''),
+        fmtDate(it.activationDate),
+        String(it.note || ''),
+      ]);
+    });
+    const blockEnd = aoa.length - 1;
+    if (blockEnd > blockStart) {
+      merges.push({ s: { r: blockStart, c: 0 }, e: { r: blockEnd, c: 0 } });
+      merges.push({ s: { r: blockStart, c: 1 }, e: { r: blockEnd, c: 1 } });
+    }
+  });
+  return { aoa, merges, headerRow };
+}
+
+// Gom bản ghi tháng hiện tại + ghép đội cán bộ, xếp theo cán bộ rồi ngày kích hoạt.
+function collectVneidRowsForSheet() {
+  const month = monthKey();
+  const teamByName = {};
+  VNEID_OFFICERS.forEach((o) => { teamByName[o.name] = o.team || ''; });
+  const rows = readVneidActivations()
+    .filter((a) => a.month === month)
+    .map((a) => ({
+      officerName: a.officerName,
+      team: teamByName[a.officerName] || '',
+      residentName: a.residentName || '',
+      cccd: a.cccd,
+      activationDate: a.activationDate || '',
+      note: '',
+    }));
+  rows.sort((a, b) => {
+    const c = a.officerName.localeCompare(b.officerName, 'vi');
+    if (c !== 0) return c;
+    return (a.activationDate || '').localeCompare(b.activationDate || '');
+  });
+  return rows;
+}
+
+// Đẩy dữ liệu kích hoạt lên Google Sheet (fire-and-forget, không chặn response).
+function syncVneidToSheets() {
+  if (!VNEID_SHEETS_WEBHOOK) return Promise.resolve();
+  try {
+    const now = new Date();
+    const rows = collectVneidRowsForSheet();
+    const { aoa, merges } = buildActivationAoa(rows, {
+      unit: 'TỔ CÔNG TÁC ĐỊNH DANH ĐIỆN TỬ MỨC 2',
+      title: `KÍCH HOẠT ĐỊNH DANH MỨC 2 THÁNG ${now.getMonth() + 1}/${now.getFullYear()}`,
+    });
+    // Đổi merges sang dạng 1-based {row,col,numRows,numCols} cho Apps Script
+    const merges1 = merges.map((m) => ({
+      row: m.s.r + 1, col: m.s.c + 1,
+      numRows: m.e.r - m.s.r + 1, numCols: m.e.c - m.s.c + 1,
+    }));
+    const body = JSON.stringify({
+      sheetName: `Thang ${now.getMonth() + 1}-${now.getFullYear()}`,
+      values: aoa,
+      merges: merges1,
+      headerRow: 6,
+    });
+    const url = new URL(VNEID_SHEETS_WEBHOOK);
+    const options = {
+      hostname: url.hostname,
+      path: url.pathname + url.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body, 'utf8'),
+      },
+    };
+    const lib = url.protocol === 'https:' ? require('https') : require('http');
+    return new Promise((resolve) => {
+      const req = lib.request(options, (res) => { res.on('data', () => {}); res.on('end', resolve); });
+      req.on('error', resolve);
+      req.write(body);
+      req.end();
+    });
+  } catch (_e) {
+    return Promise.resolve();
+  }
+}
+
 // ── VNeID Access Log ──────────────────────────────────────────────────────────
 const readVneidAccessLog = () => {
   if (!fs.existsSync(vneidAccessLogFile)) return [];
@@ -1028,7 +1158,10 @@ app.post('/api/vneid/logout', (_req, res) => {
 app.get('/api/vneid/me', (req, res) => {
   const officer = currentOfficer(req);
   if (!officer) return res.status(401).json({ error: 'Chưa đăng nhập' });
-  res.json({ name: officer.name, team: officer.team, group: officer.group, position: officer.position });
+  res.json({
+    name: officer.name, team: officer.team, group: officer.group, position: officer.position,
+    sheetsViewUrl: VNEID_SHEETS_VIEW_URL || '',   // URL trang tính Google (nếu đã cấu hình)
+  });
 });
 
 // Log kích hoạt — chỉ tính theo tháng (mặc định tháng hiện tại). "Reset mùng 1" = lọc theo tháng.
@@ -1059,6 +1192,8 @@ app.post('/api/vneid/activations', async (req, res) => {
   if (isNaN(parsedDate.getTime())) {
     return res.status(400).json({ error: 'Ngày kích hoạt không hợp lệ' });
   }
+  // Tên công dân (để ghi cột "Họ tên tr/h kích hoạt" trên trang tính). Không bắt buộc.
+  const residentName = String(req.body?.residentName || '').trim().slice(0, 200);
 
   const month = monthKey();
   try {
@@ -1069,12 +1204,14 @@ app.post('/api/vneid/activations', async (req, res) => {
       const entry = {
         cccd,
         officerName: officer.name,   // lấy từ cookie, không tin client
+        residentName,                // tên công dân (client gửi kèm để lên trang tính)
         month,
         activationDate,              // ngày kích hoạt do cán bộ nhập
         timestamp: new Date().toISOString(),
       };
       return { changed: true, data: [...all, entry], entry, created: true };
     });
+    if (result.created) syncVneidToSheets().catch(() => {}); // đẩy lên Google Sheet, không chặn response
     res.status(result.created ? 201 : 200).json({
       ok: true,
       alreadyActivated: !result.created,
@@ -1121,65 +1258,14 @@ app.post('/api/vneid/activations/export', (req, res) => {
     const unit = String(req.body?.unit || 'TỔ CÔNG TÁC ĐỊA BÀN').trim();
     const title = String(req.body?.title || 'KÍCH HOẠT ĐỊNH DANH MỨC 2').trim();
 
-    // Đổi 'YYYY-MM-DD' -> 'DD/MM/YYYY' cho dễ đọc (giữ nguyên nếu không đúng dạng)
-    const fmtDate = (s) => {
-      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
-      return m ? `${m[3]}/${m[2]}/${m[1]}` : String(s || '');
-    };
-
-    // Nhóm bản ghi theo cán bộ, giữ thứ tự xuất hiện (client đã sắp xếp sẵn)
-    const groups = [];
-    const idxByOfficer = {};
-    rows.forEach((r) => {
-      const key = String(r.officerName || '');
-      if (!(key in idxByOfficer)) {
-        idxByOfficer[key] = groups.length;
-        groups.push({ officerName: key, team: String(r.team || ''), items: [] });
-      }
-      groups[idxByOfficer[key]].items.push(r);
-    });
-
-    const HEADER_ROW = 5; // 0-based: dòng tiêu đề cột (STT | Họ và tên cán bộ | ...)
-    const aoa = [];
-    aoa.push([unit]);                              // dòng 1 (A1): tên tổ
-    aoa.push([]);                                  // dòng 2: trống
-    aoa.push([title]);                             // dòng 3: tiêu đề (merge A:G)
-    aoa.push([]);                                  // dòng 4: trống
-    aoa.push([]);                                  // dòng 5: trống (đệm cho đẹp)
-    aoa.push(['STT', 'Họ và tên cán bộ', 'STT', 'Họ tên tr/h kích hoạt', 'Số CCCD', 'Ngày kích hoạt', 'Ghi chú']);
-
-    const merges = [
-      { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } }, // gộp ô tiêu đề chính qua 7 cột
-    ];
-
-    let officerNo = 0;
-    groups.forEach((g) => {
-      officerNo += 1;
-      const blockStart = aoa.length; // dòng đầu của khối cán bộ này (0-based)
-      g.items.forEach((it, i) => {
-        aoa.push([
-          i === 0 ? officerNo : '',
-          i === 0 ? g.officerName : '',
-          i + 1,
-          String(it.residentName || ''),
-          String(it.cccd || ''),
-          fmtDate(it.activationDate),
-          String(it.note || ''),
-        ]);
-      });
-      const blockEnd = aoa.length - 1;
-      if (blockEnd > blockStart) {
-        // Gộp dọc cột STT cán bộ (A) và tên cán bộ (B) qua toàn bộ công dân của họ
-        merges.push({ s: { r: blockStart, c: 0 }, e: { r: blockEnd, c: 0 } });
-        merges.push({ s: { r: blockStart, c: 1 }, e: { r: blockEnd, c: 1 } });
-      }
-    });
+    // Dùng chung helper với sync Google Sheet để bố cục luôn khớp nhau
+    const { aoa, merges, headerRow } = buildActivationAoa(rows, { unit, title });
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!merges'] = merges;
     ws['!cols'] = [{ wch: 5 }, { wch: 26 }, { wch: 5 }, { wch: 26 }, { wch: 16 }, { wch: 14 }, { wch: 16 }];
     // Ép cột CCCD (E) về dạng text để giữ số 0 đầu
-    for (let r = HEADER_ROW + 1; r < aoa.length; r += 1) {
+    for (let r = headerRow + 1; r < aoa.length; r += 1) {
       const ref = XLSX.utils.encode_cell({ r, c: 4 });
       if (ws[ref] && ws[ref].v != null && ws[ref].v !== '') ws[ref].t = 's';
     }
@@ -1361,6 +1447,7 @@ app.post('/api/vneid/admin/delete-activation', async (req, res) => {
     });
     if (denied) return res.status(403).json({ error: 'Chỉ được xóa báo cáo của chính mình' });
     if (!result.removed) return res.status(404).json({ error: 'Không tìm thấy bản ghi kích hoạt' });
+    syncVneidToSheets().catch(() => {}); // cập nhật lại trang tính sau khi xóa
     res.json({ ok: true, removed: result.removed });
   } catch (err) {
     console.error('VNeID delete activation failed:', err);

@@ -1853,6 +1853,7 @@
             <div class="action-bar">
                 <h2>Theo dõi tiến độ chỉ tiêu cán bộ (Chỉ tiêu: ≥10 hồ sơ)</h2>
                 <div class="action-btn-group">
+                    <button class="action-btn" id="btn-open-sheet" style="background: #0f9d58; border-color: #0f9d58; display:none;" onclick="openGoogleSheet()">📗 Mở trang tính Google</button>
                     <button class="action-btn" id="btn-export-excel" style="background: var(--accent-emerald); border-color: var(--accent-emerald); display:none;" onclick="exportExcelReport()">📊 Xuất Excel</button>
                     <button class="action-btn" id="btn-export-text" style="background: var(--primary); display:none;" onclick="exportTextReport()">Trích xuất báo cáo (Text)</button>
                 </div>
@@ -1997,6 +1998,9 @@
                         if (btnXls) btnXls.style.display = '';
                         const btnTxt = document.getElementById('btn-export-text');
                         if (btnTxt) btnTxt.style.display = '';
+                        // Nút mở trang tính Google chỉ hiện khi đã cấu hình URL xem
+                        const btnSheet = document.getElementById('btn-open-sheet');
+                        if (btnSheet && CURRENT_OFFICER.sheetsViewUrl) btnSheet.style.display = '';
                     } else {
                         // Cán bộ thường: ẩn card "Đã kích hoạt cục bộ" (chỉ admin xem tổng toàn đơn vị)
                         const card = document.getElementById('stat-card-local-activated');
@@ -2875,7 +2879,7 @@
                 const res = await fetch('/api/vneid/activations', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cccd: pendingActCccd, activationDate })
+                    body: JSON.stringify({ cccd: pendingActCccd, activationDate, residentName: pendingActName })
                 });
                 if (!res.ok) {
                     if (res.status === 401) {
@@ -3046,6 +3050,13 @@
                 return (a.timestamp || '').localeCompare(b.timestamp || '');
             });
             return rows;
+        }
+
+        // Mở trang tính Google (dữ liệu tự cập nhật khi cán bộ nhập kích hoạt)
+        function openGoogleSheet() {
+            const url = CURRENT_OFFICER && CURRENT_OFFICER.sheetsViewUrl;
+            if (!url) { alert('Chưa cấu hình trang tính Google.'); return; }
+            window.open(url, '_blank', 'noopener');
         }
 
         // Xuất Excel qua server (dùng thư viện XLSX server-side)
