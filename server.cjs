@@ -1086,10 +1086,12 @@ app.post('/api/vneid/activations', async (req, res) => {
   }
 });
 
-// Bảng xếp hạng thi đua — mọi cán bộ đều xem được. CHỈ trả tên cán bộ + số lượng,
-// KHÔNG kèm CCCD/tên công dân (thông tin công dân thật chỉ admin thấy).
+// Bảng xếp hạng số lượng theo cán bộ — CHỈ admin xem được (cán bộ thường không
+// được thấy số của người khác). Trả tên cán bộ + số lượng, không kèm CCCD.
 app.get('/api/vneid/leaderboard', (req, res) => {
-  if (!currentOfficer(req)) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  const officer = currentOfficer(req);
+  if (!officer) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  if (officer.nameKey !== VNEID_ADMIN_KEY) return res.status(403).json({ error: 'Không có quyền truy cập' });
   const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : monthKey();
   const all = readVneidActivations().filter((a) => a.month === month);
   const countByOfficer = {};
@@ -1285,17 +1287,27 @@ app.post('/api/vneid/admin/set-badge', (req, res) => {
 
 // Mục 6: Xóa 1 bản ghi công dân đã kích hoạt (theo cccd + month). Admin dùng khi báo nhầm.
 app.post('/api/vneid/admin/delete-activation', async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Không có quyền truy cập' });
+  // Cán bộ thường được xóa bản ghi CỦA CHÍNH MÌNH; admin xóa được của mọi người.
+  const officer = currentOfficer(req);
+  if (!officer) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  const admin = officer.nameKey === VNEID_ADMIN_KEY;
   const cccd = String(req.body?.cccd || '').replace(/\D/g, '');
   const month = /^\d{4}-\d{2}$/.test(req.body?.month || '') ? req.body.month : monthKey();
   if (!/^\d{12}$/.test(cccd)) return res.status(400).json({ error: 'Số CCCD phải gồm 12 chữ số' });
   try {
+    let denied = false;
     const result = await updateVneidActivations((all) => {
       const idx = all.findIndex((a) => a.cccd === cccd && a.month === month);
       if (idx === -1) return { changed: false, data: all, removed: null };
+      // Cán bộ thường chỉ xóa được bản ghi do chính mình báo cáo
+      if (!admin && all[idx].officerName !== officer.name) {
+        denied = true;
+        return { changed: false, data: all, removed: null };
+      }
       const [removed] = all.splice(idx, 1);
       return { changed: true, data: all, removed };
     });
+    if (denied) return res.status(403).json({ error: 'Chỉ được xóa báo cáo của chính mình' });
     if (!result.removed) return res.status(404).json({ error: 'Không tìm thấy bản ghi kích hoạt' });
     res.json({ ok: true, removed: result.removed });
   } catch (err) {

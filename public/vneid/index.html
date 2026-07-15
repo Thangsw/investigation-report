@@ -2380,9 +2380,9 @@
         function updateGlobalStats() {
             const total = RESIDENT_DATA.length;
 
-            // Tổng số đã kích hoạt toàn đơn vị = tổng bảng xếp hạng (mọi người xem được).
-            // Không dùng ACTIVATION_LOGS vì non-admin chỉ có bản ghi của chính mình.
-            const totalActivatedAllUnits = Object.values(LEADERBOARD_COUNTS || {}).reduce((s, n) => s + n, 0);
+            // Tổng số đã kích hoạt toàn đơn vị = số CCCD đã kích hoạt (mọi cán bộ xem được,
+            // không lộ ai kích). Dùng ACTIVATED_CCCD_SET vì cán bộ thường không gọi được leaderboard.
+            const totalActivatedAllUnits = ACTIVATED_CCCD_SET ? ACTIVATED_CCCD_SET.size : 0;
             document.getElementById('stat-local-activated').innerText = totalActivatedAllUnits.toLocaleString();
 
             // % so với tổng chỉ tiêu toàn đơn vị = (số cán bộ × 10 hồ sơ/người)
@@ -2928,13 +2928,23 @@
                 return;
             }
             
-            // Số lượng lấy từ bảng xếp hạng server (mọi người xem được — chỉ có số, không kèm CCCD)
-            const countByOfficer = LEADERBOARD_COUNTS || {};
             const admin = isCurrentOfficerAdmin();
+            // Số lượng: admin dùng bảng xếp hạng toàn đơn vị; cán bộ thường chỉ có số của mình.
+            const countByOfficer = admin ? (LEADERBOARD_COUNTS || {}) : {};
+            if (!admin && CURRENT_OFFICER) {
+                // Cán bộ thường: đếm từ ACTIVATION_LOGS (server chỉ trả bản ghi của chính họ)
+                countByOfficer[CURRENT_OFFICER.name] = Object.values(ACTIVATION_LOGS)
+                    .filter(l => l.officerName === CURRENT_OFFICER.name).length;
+            }
+
+            // Cán bộ thường chỉ thấy card của CHÍNH MÌNH; admin thấy tất cả.
+            let officersToShow = admin
+                ? [...OFFICER_DATA]
+                : OFFICER_DATA.filter(o => CURRENT_OFFICER && o.name === CURRENT_OFFICER.name);
 
             // Xếp theo số kích hoạt từ cao xuống thấp (ai đạt 10/10 lên đầu),
             // cùng số lượng thì theo tên
-            const sortedOfficers = [...OFFICER_DATA].sort((a, b) => {
+            const sortedOfficers = officersToShow.sort((a, b) => {
                 const ca = countByOfficer[a.name] || 0;
                 const cb = countByOfficer[b.name] || 0;
                 if (cb !== ca) return cb - ca;
@@ -3062,12 +3072,14 @@
         window.showOfficerActivations = function(officerName) {
             const rows = buildActivationRows().filter(r => r.officerName === officerName);
             const admin = isCurrentOfficerAdmin();
+            // Được xóa nếu là admin, HOẶC đang xem báo cáo của chính mình
+            const canDelete = admin || (CURRENT_OFFICER && officerName === CURRENT_OFFICER.name);
             document.getElementById('officer-list-title').innerText = `Danh sách kích hoạt — ${officerName}`;
             document.getElementById('officer-list-sub').innerText =
-                rows.length ? `Tổng cộng ${rows.length} công dân đã kích hoạt${admin ? ' — bấm Xóa để gỡ báo cáo nhầm' : ''}` : 'Cán bộ này chưa kích hoạt cho công dân nào.';
-            // Hiện/ẩn cột Xóa theo quyền admin
-            document.getElementById('officer-list-del-col').style.display = admin ? '' : 'none';
-            const colspan = admin ? 6 : 5;
+                rows.length ? `Tổng cộng ${rows.length} công dân đã kích hoạt${canDelete ? ' — bấm Xóa để gỡ báo cáo nhầm' : ''}` : 'Chưa kích hoạt cho công dân nào.';
+            // Hiện/ẩn cột Xóa
+            document.getElementById('officer-list-del-col').style.display = canDelete ? '' : 'none';
+            const colspan = canDelete ? 6 : 5;
             const body = document.getElementById('officer-list-body');
             if (!rows.length) {
                 body.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;color:var(--text-muted);padding:30px;">Chưa có dữ liệu</td></tr>`;
@@ -3079,10 +3091,10 @@
                         <td style="font-family:monospace;">${r.cccd}</td>
                         <td style="color:var(--text-secondary);font-size:0.82rem;">${r.address}</td>
                         <td style="color:var(--text-secondary);font-size:0.8rem;white-space:nowrap;">${fmtTimestamp(r.timestamp)}</td>
-                        ${admin ? `<td><button class="action-btn officer-list-del-btn" data-cccd="${r.cccd}" data-month="${r.month || ''}" data-name="${r.residentName.replace(/"/g,'&quot;')}" style="background:rgba(244,63,94,0.15);border-color:rgba(244,63,94,0.4);color:var(--accent-rose);padding:6px 12px;">Xóa</button></td>` : ''}
+                        ${canDelete ? `<td><button class="action-btn officer-list-del-btn" data-cccd="${r.cccd}" data-month="${r.month || ''}" data-name="${r.residentName.replace(/"/g,'&quot;')}" style="background:rgba(244,63,94,0.15);border-color:rgba(244,63,94,0.4);color:var(--accent-rose);padding:6px 12px;">Xóa</button></td>` : ''}
                     </tr>`).join('');
                 // Gán event bằng addEventListener (an toàn với tên tiếng Việt, tránh lỗi escape onclick inline)
-                if (admin) {
+                if (canDelete) {
                     body.querySelectorAll('.officer-list-del-btn').forEach(btn => {
                         btn.addEventListener('click', () => {
                             deleteActivationFromModal(btn, btn.dataset.cccd, btn.dataset.month, btn.dataset.name, officerName);
