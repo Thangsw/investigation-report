@@ -18,6 +18,8 @@ const workProgressFile = path.join(DATA_DIR, 'work-progress-reports.json');
 const vneidActivationsFile = path.join(DATA_DIR, 'vneid-activations.json');
 const vneidIssuesFile = path.join(DATA_DIR, 'vneid-issues.json');
 const vneidAccessLogFile = path.join(DATA_DIR, 'vneid-access-log.json');
+// Tháng làm việc hiện hành do admin chốt (để tiến tới tháng mới sớm hơn lịch). Cấu trúc: { month: "YYYY-MM" }
+const vneidActiveMonthFile = path.join(DATA_DIR, 'vneid-active-month.json');
 // Override số hiệu do admin sửa trên web — lưu Volume, đè lên file repo lúc khởi động.
 // Cấu trúc: { "<nameKey>": "<badgeDigits>" }
 const vneidBadgeOverridesFile = path.join(DATA_DIR, 'vneid-badge-overrides.json');
@@ -180,8 +182,35 @@ const currentOfficer = (req) => {
   return VNEID_OFFICERS.find((o) => o.nameKey === payload.n) || null;
 };
 
-const monthKey = (d = new Date()) =>
+const calendarMonthKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+// Tháng admin đã chốt (nếu có), lưu trên Volume. Rỗng => dùng tháng theo lịch.
+const readActiveMonthOverride = () => {
+  if (!fs.existsSync(vneidActiveMonthFile)) return '';
+  try {
+    const m = JSON.parse(fs.readFileSync(vneidActiveMonthFile, 'utf8'));
+    return /^\d{4}-\d{2}$/.test(m && m.month) ? m.month : '';
+  } catch { return ''; }
+};
+const writeActiveMonthOverride = (month) => {
+  const tempFile = `${vneidActiveMonthFile}.${process.pid}.tmp`;
+  fs.writeFileSync(tempFile, JSON.stringify({ month }, null, 2));
+  fs.renameSync(tempFile, vneidActiveMonthFile);
+};
+// Cộng/trừ n tháng cho chuỗi "YYYY-MM"
+const shiftMonth = (key, n) => {
+  const [y, m] = key.split('-').map(Number);
+  const d = new Date(y, (m - 1) + n, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+// Tháng làm việc hiện hành = tháng lớn hơn giữa (lịch) và (admin chốt).
+// => Mùng 1 vẫn tự sang tháng mới; admin có thể chốt sang sớm hơn nhưng không lùi về quá khứ.
+const monthKey = (d = new Date()) => {
+  const cal = calendarMonthKey(d);
+  const override = readActiveMonthOverride();
+  return (override && override > cal) ? override : cal;
+};
 
 const readVneidActivations = () => {
   if (!fs.existsSync(vneidActivationsFile)) return [];
@@ -1463,6 +1492,47 @@ app.post('/api/vneid/admin/delete-activation', async (req, res) => {
   } catch (err) {
     console.error('VNeID delete activation failed:', err);
     res.status(500).json({ error: 'Không xóa được bản ghi' });
+  }
+});
+
+// Mục 7: Xem tháng làm việc hiện hành + số bản ghi từng tháng (để admin biết đang ở tháng nào)
+app.get('/api/vneid/admin/work-month', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Không có quyền truy cập' });
+  const current = monthKey();                    // tháng đang tính chỉ tiêu
+  const calendar = calendarMonthKey();           // tháng theo lịch
+  // Đếm số bản ghi theo từng tháng để admin nắm dữ liệu cũ
+  const counts = {};
+  readVneidActivations().forEach((a) => { counts[a.month] = (counts[a.month] || 0) + 1; });
+  res.json({ current, calendar, counts });
+});
+
+// Mục 7: Chuyển tháng làm việc (admin chốt tháng cũ, mở tháng mới cho cả đơn vị nhập lại từ 0).
+// body { direction: "next" | "prev" }. "next" = tiến sang tháng sau; "prev" = quay lại (phòng bấm nhầm),
+// nhưng KHÔNG cho lùi thấp hơn tháng theo lịch (không làm mất hiệu ứng reset mùng 1).
+app.post('/api/vneid/admin/work-month', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Không có quyền truy cập' });
+  const direction = String(req.body?.direction || '').trim();
+  if (direction !== 'next' && direction !== 'prev') {
+    return res.status(400).json({ error: 'direction phải là "next" hoặc "prev"' });
+  }
+  const current = monthKey();
+  const calendar = calendarMonthKey();
+  let target = shiftMonth(current, direction === 'next' ? 1 : -1);
+  // Không cho lùi về trước tháng theo lịch
+  if (target < calendar) target = calendar;
+  try {
+    // Nếu target trùng tháng lịch thì xóa override (về chế độ tự động theo lịch)
+    if (target === calendar) {
+      if (fs.existsSync(vneidActiveMonthFile)) fs.unlinkSync(vneidActiveMonthFile);
+    } else {
+      writeActiveMonthOverride(target);
+    }
+    const newCurrent = monthKey();
+    syncVneidToSheets().catch(() => {}); // đẩy trang tính sang sheet tháng mới
+    res.json({ ok: true, current: newCurrent, calendar });
+  } catch (err) {
+    console.error('VNeID work-month switch failed:', err);
+    res.status(500).json({ error: 'Không chuyển được tháng làm việc' });
   }
 });
 

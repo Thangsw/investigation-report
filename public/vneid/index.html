@@ -1615,6 +1615,24 @@
                 <h2>🛡 Quản trị hệ thống</h2>
                 <p style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:16px;">Chỉ hiển thị với tài khoản quản trị viên</p>
 
+                <!-- Chuyển tháng làm việc: chốt tháng cũ, mở tháng mới cho cả đơn vị nhập lại từ 0 -->
+                <div style="background:rgba(15,157,88,0.08); border:1px solid rgba(15,157,88,0.35); border-radius:12px; padding:16px; margin-bottom:20px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <div style="font-size:0.82rem; color:var(--text-secondary);">Tháng làm việc hiện tại</div>
+                            <div id="work-month-label" style="font-size:1.35rem; font-weight:700; color:#34d399;">—</div>
+                            <div id="work-month-note" style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;"></div>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="action-btn" id="btn-month-prev" onclick="switchWorkMonth('prev')" style="background:var(--surface-2); border-color:var(--border);">◀ Quay lại tháng trước</button>
+                            <button class="action-btn" id="btn-month-next" onclick="switchWorkMonth('next')" style="background:#0f9d58; border-color:#0f9d58;">Chuyển sang tháng mới ▶</button>
+                        </div>
+                    </div>
+                    <div style="font-size:0.78rem; color:var(--text-muted); margin-top:10px; line-height:1.5;">
+                        Bấm <b>"Chuyển sang tháng mới"</b> để chốt tháng đang làm và mở tháng kế tiếp — cả đơn vị bắt đầu nhập kích hoạt cho tháng mới từ 0, chỉ tiêu về lại 0/10. Dữ liệu các tháng cũ vẫn được giữ nguyên, xem lại được. Nếu bấm nhầm, dùng <b>"Quay lại tháng trước"</b> (không lùi được thấp hơn tháng theo lịch).
+                    </div>
+                </div>
+
                 <div class="admin-stats-grid" id="admin-summary-boxes">
                     <div class="admin-stat-box">
                         <div class="val" id="admin-total-logins" style="color:var(--accent-cyan);">—</div>
@@ -2169,8 +2187,68 @@
             await loadAdminBadges();
             // Mục 6: Danh sách công dân đã báo cáo (để xóa)
             await loadAdminDeletable();
+            // Mục 7: Tháng làm việc hiện hành
+            await loadWorkMonth();
 
             adminDataLoaded = true;
+        }
+
+        // ── Mục 7: Chuyển tháng làm việc ─────────────────────────────────────
+        function fmtMonthVi(key) {
+            const m = /^(\d{4})-(\d{2})$/.exec(String(key || ''));
+            return m ? `Tháng ${Number(m[2])}/${m[1]}` : (key || '—');
+        }
+        async function loadWorkMonth() {
+            try {
+                const res = await fetch('/api/vneid/admin/work-month');
+                if (!res.ok) return;
+                const { current, calendar, counts } = await res.json();
+                const label = document.getElementById('work-month-label');
+                const note = document.getElementById('work-month-note');
+                if (label) label.textContent = fmtMonthVi(current);
+                if (note) {
+                    const cnt = (counts && counts[current]) ? counts[current] : 0;
+                    let txt = `Đã có ${cnt} lượt kích hoạt trong tháng này.`;
+                    if (current !== calendar) txt += ` (Đã chốt vượt trước tháng lịch ${fmtMonthVi(calendar)})`;
+                    note.textContent = txt;
+                }
+                // Không cho lùi thấp hơn tháng lịch
+                const prevBtn = document.getElementById('btn-month-prev');
+                if (prevBtn) prevBtn.disabled = (current === calendar);
+            } catch (e) { console.error('Lỗi tải tháng làm việc:', e); }
+        }
+        async function switchWorkMonth(direction) {
+            const label = fmtMonthVi(document.getElementById('work-month-label').textContent);
+            const msg = direction === 'next'
+                ? 'Chuyển sang THÁNG MỚI?\n\nCả đơn vị sẽ bắt đầu nhập kích hoạt cho tháng kế tiếp từ 0, chỉ tiêu về lại 0/10. Dữ liệu tháng hiện tại vẫn được giữ nguyên (xem lại được).'
+                : 'Quay lại tháng trước? (dùng khi bấm nhầm)';
+            if (!confirm(msg)) return;
+            const nextBtn = document.getElementById('btn-month-next');
+            const prevBtn = document.getElementById('btn-month-prev');
+            if (nextBtn) nextBtn.disabled = true;
+            if (prevBtn) prevBtn.disabled = true;
+            try {
+                const res = await fetch('/api/vneid/admin/work-month', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ direction }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) { alert(data.error || 'Không chuyển được tháng.'); if (nextBtn) nextBtn.disabled = false; return; }
+                alert(`Đã chuyển sang ${fmtMonthVi(data.current)}. Cả đơn vị bắt đầu nhập kích hoạt cho tháng này.`);
+                // Nạp lại toàn bộ dữ liệu theo tháng mới
+                ACTIVATION_LOGS = {};
+                await loadActivations();
+                await loadWorkMonth();
+                if (typeof loadAdminDeletable === 'function') await loadAdminDeletable();
+                if (typeof updateGlobalStats === 'function') updateGlobalStats();
+                if (typeof updateOfficerQuotaInfo === 'function') updateOfficerQuotaInfo();
+            } catch (e) {
+                console.error('Lỗi chuyển tháng:', e);
+                alert('Lỗi kết nối khi chuyển tháng.');
+                if (nextBtn) nextBtn.disabled = false;
+                if (prevBtn) prevBtn.disabled = false;
+            }
         }
 
         // ── Mục 5: Quản lý số hiệu cán bộ ────────────────────────────────────
