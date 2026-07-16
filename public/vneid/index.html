@@ -3192,7 +3192,15 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ rows, title, unit }),
                 });
-                if (!res.ok) { alert('Không xuất được Excel. Vui lòng thử lại.'); return; }
+                if (!res.ok) {
+                    let msg = `Lỗi ${res.status}`;
+                    try { const d = await res.json(); if (d && d.error) msg = d.error; } catch (_e) {}
+                    if (res.status === 401) msg = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+                    if (res.status === 403) msg = 'Chỉ tài khoản quản trị mới được xuất Excel.';
+                    if (res.status === 413) msg = 'Dữ liệu quá lớn để xuất. Báo admin để xử lý.';
+                    alert('Không xuất được Excel: ' + msg);
+                    return;
+                }
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
