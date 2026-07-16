@@ -2244,7 +2244,8 @@
                 }
                 ADMIN_DELETABLE = (activations || []).map(a => ({
                     cccd: a.cccd, month: a.month, officerName: a.officerName,
-                    timestamp: a.timestamp, residentName: cccdMap[a.cccd] || 'Không rõ'
+                    // Ưu tiên tên trong DS gốc; công dân ngoài DS thì dùng tên đã lưu
+                    timestamp: a.timestamp, residentName: cccdMap[a.cccd] || a.residentName || 'Không rõ'
                 })).sort((x, y) => (y.timestamp || '').localeCompare(x.timestamp || ''));
                 renderAdminDeletable();
             } catch (e) { console.error('Lỗi tải danh sách xóa:', e); }
@@ -2294,7 +2295,13 @@
                 const { activations } = await res.json();
                 ACTIVATION_LOGS = {};
                 (activations || []).forEach(a => {
-                    ACTIVATION_LOGS[a.cccd] = { officerName: a.officerName, timestamp: a.timestamp, activationDate: a.activationDate || '' };
+                    ACTIVATION_LOGS[a.cccd] = {
+                        officerName: a.officerName,
+                        timestamp: a.timestamp,
+                        activationDate: a.activationDate || '',
+                        residentName: a.residentName || '',   // giữ tên công dân (quan trọng cho người ngoài DS)
+                        external: a.external === true
+                    };
                 });
             } catch (e) {
                 console.error('Lỗi tải dữ liệu kích hoạt từ server:', e);
@@ -2460,39 +2467,8 @@
             // Tổng chưa kích hoạt = tổng danh sách - đã kích hoạt toàn đơn vị
             const remainingTotal = Math.max(total - totalActivatedAllUnits, 0);
             document.getElementById('stat-total').innerText = remainingTotal.toLocaleString();
-
-            const m1Count = RESIDENT_DATA.filter(row => {
-                const profile = getVal(row, 'Tình trạng hồ sơ ĐDĐT');
-                return profile.includes('mức 1') || profile.includes('Mức 1');
-            }).length;
-
-            // M2 remaining to activate
-            const m2Total = RESIDENT_DATA.filter(row => {
-                const profile = getVal(row, 'Tình trạng hồ sơ ĐDĐT');
-                return profile.includes('mức 2') || profile.includes('Mức 2');
-            }).length;
-
-            // Remaining unactivated M2 count = total M2 - locally activated M2
-            // Since all entries in local ACTIVATION_LOGS are from this unactivated list
-            let m2LocalActivated = 0;
-            RESIDENT_DATA.forEach(row => {
-                const cccd = getVal(row, 'Số CCCD/ĐDCD');
-                const cleanCccd = cccd.endsWith('*') ? cccd.slice(0, -1) : cccd;
-                if (ACTIVATION_LOGS[cleanCccd]) {
-                    const profile = getVal(row, 'Tình trạng hồ sơ ĐDĐT');
-                    if (profile.includes('mức 2') || profile.includes('Mức 2')) {
-                        m2LocalActivated++;
-                    }
-                }
-            });
-            const m2Remaining = m2Total - m2LocalActivated;
-
-            document.getElementById('stat-m2-not-activated').innerText = m2Remaining.toLocaleString();
-            document.getElementById('stat-m2-pct').innerText = total > 0 ? ((m2Remaining / total) * 100).toFixed(1) + '% tổng số lượng' : '0%';
-
-            const cccdCount = RESIDENT_DATA.filter(row => getVal(row, 'Tình trạng cấp CCCD') === 'Được cấp').length;
-            document.getElementById('stat-cccd').innerText = cccdCount.toLocaleString();
-            document.getElementById('stat-cccd-pct').innerText = total > 0 ? ((cccdCount / total) * 100).toFixed(1) + '% tổng số lượng' : '0%';
+            // Lưu ý: 2 card "Hồ sơ mức 2 tồn đọng" + "Đã cấp thẻ CCCD" đã bỏ khỏi giao diện,
+            // nên KHÔNG gán innerText cho stat-m2-*/stat-cccd-* nữa (getElementById trả null → lỗi).
         }
 
         function switchTab(tabId) {
@@ -3164,13 +3140,16 @@
 
             const rows = [];
             Object.entries(ACTIVATION_LOGS).forEach(([cccd, log]) => {
-                const resident = cccdMap[cccd] || { name: 'Không rõ', address: '' };
+                const resident = cccdMap[cccd];
+                // Ưu tiên tên trong danh sách gốc; nếu công dân ngoài DS thì dùng tên đã lưu
+                const name = (resident && resident.name) ? resident.name : (log.residentName || 'Không rõ');
+                const address = (resident && resident.address) ? resident.address : (log.external ? '(Ngoài danh sách)' : '');
                 rows.push({
                     officerName: log.officerName,
                     team: teamByOfficer[log.officerName] || '',
-                    residentName: resident.name,
+                    residentName: name,
                     cccd,
-                    address: resident.address,
+                    address: address,
                     activationDate: log.activationDate || '',
                     timestamp: log.timestamp,
                 });
@@ -3317,11 +3296,14 @@
             // Populate officer logs
             Object.entries(ACTIVATION_LOGS).forEach(([cccd, log]) => {
                 if (officerLogs[log.officerName]) {
-                    const resident = cccdMap[cccd] || { name: 'Không rõ', commune: 'Không rõ' };
+                    const resident = cccdMap[cccd];
+                    // Ưu tiên tên trong DS gốc; công dân ngoài DS dùng tên đã lưu
+                    const name = (resident && resident.name) ? resident.name : (log.residentName || 'Không rõ');
+                    const commune = (resident && resident.commune) ? resident.commune : (log.external ? '(Ngoài danh sách)' : 'Không rõ');
                     officerLogs[log.officerName].push({
                         cccd: cccd,
-                        name: resident.name,
-                        commune: resident.commune,
+                        name: name,
+                        commune: commune,
                         timestamp: log.timestamp
                     });
                 }
