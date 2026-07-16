@@ -3201,15 +3201,20 @@
                     alert('Không xuất được Excel: ' + msg);
                     return;
                 }
-                const blob = await res.blob();
+                const raw = await res.blob();
+                // Ép đúng MIME của .xlsx để trình duyệt/Windows nhận diện là file Excel
+                const blob = new Blob([raw], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const now2 = new Date();
+                const fileName = `kich-hoat-dinh-danh-muc-2-thang-${now2.getMonth() + 1}-${now2.getFullYear()}.xlsx`;
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'kich-hoat-vneid.xlsx';
+                a.download = fileName;
+                a.rel = 'noopener';
                 document.body.appendChild(a);
                 a.click();
-                a.remove();
-                URL.revokeObjectURL(url);
+                // Hoãn gỡ link + thu hồi blob để trình duyệt kịp lấy tên file (tránh ra tên UUID không đuôi)
+                setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 1500);
             } catch (e) {
                 console.error('Export Excel lỗi:', e);
                 alert('Lỗi kết nối khi xuất Excel.');
