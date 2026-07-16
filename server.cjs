@@ -1194,6 +1194,14 @@ app.post('/api/vneid/activations', async (req, res) => {
   }
   // Tên công dân (để ghi cột "Họ tên tr/h kích hoạt" trên trang tính). Không bắt buộc.
   const residentName = String(req.body?.residentName || '').trim().slice(0, 200);
+  // Ngày sinh (chỉ dùng khi công dân KHÔNG có trong danh sách gốc). Không bắt buộc.
+  const residentBirthday = String(req.body?.residentBirthday || '').trim().slice(0, 20);
+  // Cờ đánh dấu công dân do cán bộ tự nhập (không có trong data.js)
+  const external = req.body?.external === true;
+  // Nếu là công dân ngoài danh sách thì bắt buộc phải có tên
+  if (external && !residentName) {
+    return res.status(400).json({ error: 'Vui lòng nhập họ tên công dân' });
+  }
 
   const month = monthKey();
   try {
@@ -1205,6 +1213,8 @@ app.post('/api/vneid/activations', async (req, res) => {
         cccd,
         officerName: officer.name,   // lấy từ cookie, không tin client
         residentName,                // tên công dân (client gửi kèm để lên trang tính)
+        residentBirthday,            // ngày sinh (chỉ có khi ngoài danh sách)
+        external,                    // true nếu công dân do cán bộ tự nhập
         month,
         activationDate,              // ngày kích hoạt do cán bộ nhập
         timestamp: new Date().toISOString(),

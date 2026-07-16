@@ -1506,6 +1506,9 @@
                         <option value="">Tất cả các năm</option>
                     </select>
                 </div>
+                <div class="form-group" style="display:flex; align-items:flex-end;">
+                    <button class="action-btn" style="width:100%; background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.4); color: var(--accent-amber);" onclick="openExternalActivation()">➕ Báo công dân chưa có trong danh sách</button>
+                </div>
             </div>
 
             <!-- Table section -->
@@ -1925,6 +1928,53 @@
                             <button class="action-btn" style="background: rgba(255,255,255,0.05); border-color: var(--border-color); color: var(--text-secondary);" onclick="hideIssueForm()">Quay lại</button>
                             <button class="action-btn" id="act-issue-submit-btn" style="background: var(--accent-rose); border-color: var(--accent-rose);" onclick="submitIssue()">Gửi báo lỗi</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External Citizen (chưa có trong DS) Activation Modal -->
+    <div class="modal" id="external-modal" onclick="closeModal('external-modal')">
+        <div class="modal-content" style="max-width: 500px;" onclick="event.stopPropagation()">
+            <div class="modal-header" style="background: linear-gradient(to right, rgba(245,158,11,0.10), rgba(6,182,212,0.06));">
+                <h3>Báo công dân chưa có trong danh sách</h3>
+                <button class="close-btn" onclick="closeModal('external-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <p style="font-size: 0.85rem; color: var(--text-muted);">Nhập thông tin công dân đã kích hoạt thành công nhưng chưa có trong danh sách tra cứu. Bản ghi sẽ được tính vào thành tích của đồng chí.</p>
+
+                    <div class="form-group" style="margin:0;">
+                        <label for="ext-name">Họ và tên <span style="color:var(--accent-rose);">*</span></label>
+                        <input type="text" id="ext-name" class="input-control" placeholder="VD: Nguyễn Văn A" style="font-family: var(--font-main);">
+                    </div>
+
+                    <div class="form-group" style="margin:0;">
+                        <label for="ext-cccd">Số CCCD <span style="color:var(--accent-rose);">*</span></label>
+                        <input type="text" id="ext-cccd" class="input-control" inputmode="numeric" maxlength="12" placeholder="12 chữ số" style="font-family: var(--font-main);">
+                    </div>
+
+                    <div class="form-group" style="margin:0;">
+                        <label for="ext-birthday">Ngày tháng năm sinh <span style="color:var(--text-muted); font-weight:400;">(không bắt buộc)</span></label>
+                        <input type="date" id="ext-birthday" class="input-control" style="font-family: var(--font-main);">
+                    </div>
+
+                    <div class="form-group" style="margin:0;">
+                        <label for="ext-date">Ngày kích hoạt <span style="color:var(--accent-rose);">*</span></label>
+                        <input type="date" id="ext-date" class="input-control" style="font-family: var(--font-main);">
+                    </div>
+
+                    <div>
+                        <p style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600;">Cán bộ thực hiện</p>
+                        <div class="input-control" style="display:flex; align-items:center; background: rgba(6,182,212,0.08); border-color: rgba(6,182,212,0.3); margin-top:4px;">
+                            <span id="ext-officer-name" style="font-weight:600; color:#fff;">—</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button class="action-btn" style="background: rgba(255,255,255,0.05); border-color: var(--border-color); color: var(--text-secondary);" onclick="closeModal('external-modal')">Hủy</button>
+                        <button class="action-btn" id="ext-submit-btn" style="background: var(--accent-emerald); border-color: var(--accent-emerald);" onclick="confirmExternalActivation()">✓ Xác nhận kích hoạt</button>
                     </div>
                 </div>
             </div>
@@ -2768,6 +2818,91 @@
             hideIssueForm();
             document.getElementById('act-issue-text').value = '';
             document.getElementById('activation-modal').classList.add('active');
+        }
+
+        // Mở modal nhập công dân chưa có trong danh sách
+        function openExternalActivation() {
+            if (!CURRENT_OFFICER) {
+                alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                window.location.reload();
+                return;
+            }
+            document.getElementById('ext-name').value = '';
+            document.getElementById('ext-cccd').value = '';
+            document.getElementById('ext-birthday').value = '';
+            document.getElementById('ext-officer-name').innerText = CURRENT_OFFICER.name;
+            // Ngày kích hoạt mặc định = hôm nay, không cho tương lai
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+            const dateEl = document.getElementById('ext-date');
+            dateEl.value = today; dateEl.max = today;
+            document.getElementById('ext-birthday').max = today;
+            document.getElementById('external-modal').classList.add('active');
+            document.getElementById('ext-name').focus();
+        }
+
+        // Gửi kích hoạt cho công dân ngoài danh sách
+        async function confirmExternalActivation() {
+            if (!CURRENT_OFFICER) {
+                alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                window.location.reload();
+                return;
+            }
+            const name = document.getElementById('ext-name').value.trim();
+            const cccd = document.getElementById('ext-cccd').value.replace(/\D/g, '');
+            const birthday = document.getElementById('ext-birthday').value;
+            const activationDate = document.getElementById('ext-date').value;
+
+            if (!name) { alert('Vui lòng nhập họ tên công dân.'); document.getElementById('ext-name').focus(); return; }
+            if (!/^\d{12}$/.test(cccd)) { alert('Số CCCD phải gồm đúng 12 chữ số.'); document.getElementById('ext-cccd').focus(); return; }
+            if (!activationDate) { alert('Vui lòng nhập ngày kích hoạt.'); document.getElementById('ext-date').focus(); return; }
+            if (ACTIVATION_LOGS[cccd]) {
+                alert(`CCCD này đã được ghi nhận trước đó bởi ${ACTIVATION_LOGS[cccd].officerName}.`);
+                return;
+            }
+
+            const btn = document.getElementById('ext-submit-btn');
+            btn.disabled = true; btn.textContent = 'Đang lưu...';
+            try {
+                const res = await fetch('/api/vneid/activations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cccd, activationDate, residentName: name, residentBirthday: birthday, external: true })
+                });
+                if (!res.ok) {
+                    if (res.status === 401) {
+                        alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                        window.location.reload();
+                        return;
+                    }
+                    const data = await res.json().catch(() => ({}));
+                    alert(data.error || 'Lỗi lưu kích hoạt, thử lại.');
+                    return;
+                }
+                const response = await res.json();
+                const data = response.data;
+                ACTIVATION_LOGS[cccd] = {
+                    officerName: (data && data.officerName) ? data.officerName : CURRENT_OFFICER.name,
+                    timestamp: (data && data.timestamp) ? data.timestamp : new Date().toISOString(),
+                    activationDate: (data && data.activationDate) ? data.activationDate : activationDate,
+                    residentName: name
+                };
+                if (response.alreadyActivated) {
+                    alert(`CCCD này đã được ghi nhận trước đó bởi ${ACTIVATION_LOGS[cccd].officerName}.`);
+                } else {
+                    alert('Đã ghi nhận kích hoạt cho công dân ngoài danh sách. Tính vào thành tích của đồng chí!');
+                }
+                closeModal('external-modal');
+                // Cập nhật lại tiến độ + banner
+                renderCurrentOfficerBanner();
+                if (typeof renderOfficersList === 'function') renderOfficersList();
+                if (typeof updateGlobalStats === 'function') updateGlobalStats();
+            } catch (_e) {
+                alert('Lỗi kết nối, thử lại.');
+            } finally {
+                btn.disabled = false; btn.textContent = '✓ Xác nhận kích hoạt';
+            }
         }
 
         function showIssueForm() {
