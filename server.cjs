@@ -563,6 +563,18 @@ const writeWorkProgressReports = (data) => {
   fs.writeFileSync(workProgressFile, JSON.stringify(data.map(normalizeWorkProgressReport), null, 2));
 };
 
+// Khóa API hồ sơ /hs ở tầng server (giống gate /vneid). Chưa đăng nhập -> 401.
+// Đặt trước các route /api/reports, /api/config, /api/pending-changes bên dưới.
+// KHÔNG chặn /api/work-progress, /api/investigators, /api/vneid/* (công khai / tự auth).
+const HS_PROTECTED_PREFIXES = ['/api/reports', '/api/config', '/api/pending-changes'];
+app.use((req, res, next) => {
+  const p = req.path;
+  const needsAuth = HS_PROTECTED_PREFIXES.some((pre) => p === pre || p.startsWith(pre + '/'));
+  if (!needsAuth) return next();
+  if (currentOfficer(req)) return next();
+  return res.status(401).json({ error: 'Chưa đăng nhập' });
+});
+
 app.get('/api/reports/export', (req, res) => {
   try {
     let reports = readReports();
