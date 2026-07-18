@@ -1155,6 +1155,7 @@ app.get('/api/work-progress/export', (req, res) => {
 // ── VNeID API: login + activations ────────────────────────────────────────────
 app.post('/api/vneid/login', (req, res) => {
   const { name, badge } = req.body || {};
+  const source = String(req.body?.source || 'vneid');
   const officer = findOfficer(name, badge);
   if (!officer) {
     return res.status(401).json({ error: 'Sai họ tên hoặc số hiệu' });
@@ -1164,17 +1165,19 @@ app.post('/api/vneid/login', (req, res) => {
   res.setHeader('Set-Cookie',
     `${VNEID_COOKIE}=${encodeURIComponent(token)}; Path=/; Max-Age=${VNEID_SESSION_DAYS * 86400}; HttpOnly; SameSite=Lax${IS_PRODUCTION ? '; Secure' : ''}`);
 
-  // Ghi access log
-  appendVneidAccessLog({
-    id: `${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
-    officerName: officer.name,
-    team: officer.team,
-    group: officer.group,
-    ip: getClientIp(req),
-    userAgent: req.headers['user-agent'] || '',
-    timestamp: new Date().toISOString(),
-    action: 'login',
-  }).catch(() => {});
+  // Ghi access log — CHỈ ghi khi không phải login từ /hs (tránh làm sai thống kê VNeID)
+  if (source !== 'hs') {
+    appendVneidAccessLog({
+      id: `${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+      officerName: officer.name,
+      team: officer.team,
+      group: officer.group,
+      ip: getClientIp(req),
+      userAgent: req.headers['user-agent'] || '',
+      timestamp: new Date().toISOString(),
+      action: 'login',
+    }).catch(() => {});
+  }
 
   res.json({ name: officer.name, team: officer.team, group: officer.group, position: officer.position });
 });

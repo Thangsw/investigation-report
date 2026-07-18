@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import StatisticsPage from './pages/StatisticsPage';
 import WorkProgressPage from './pages/WorkProgressPage';
+import HsLoginGate from './components/HsLoginGate';
 
 function AppShell() {
   return (
@@ -39,7 +40,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/bao-cao-tien-do" element={<WorkProgressPage />} />
-      <Route path="/hs/*" element={<AppShell />} />
+      <Route path="/hs/*" element={<HsLoginGate><AppShell /></HsLoginGate>} />
     </Routes>
   );
 }
