@@ -23,7 +23,7 @@ export const api = {
   deleteReport: (id: string) =>
     axios.delete(`/api/reports/${id}`),
 
-  exportExcel: (filters?: Partial<Record<'dtvName' | 'loaiHoSo' | 'doi' | 'toBanDia', string>>) => {
+  exportExcel: (filters?: Partial<Record<'dtvName' | 'loaiHoSo' | 'doi' | 'toBanDia' | 'trichYeu' | 'maCode', string>>) => {
     const qs = filters
       ? new URLSearchParams(
           Object.entries(filters).filter(([, v]) => v) as [string, string][],

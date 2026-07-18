@@ -568,7 +568,7 @@ app.get('/api/reports/export', (req, res) => {
     let reports = readReports();
 
     // Optional query-param filtering
-    const { dtvName, loaiHoSo, doi, toBanDia, ids } = req.query;
+    const { dtvName, loaiHoSo, doi, toBanDia, trichYeu, maCode, ids } = req.query;
     if (ids) {
       const idSet = new Set(String(ids).split(','));
       reports = reports.filter(r => idSet.has(r.id));
@@ -577,6 +577,16 @@ app.get('/api/reports/export', (req, res) => {
       if (loaiHoSo)  reports = reports.filter(r => r.loaiHoSo === loaiHoSo);
       if (doi)       reports = reports.filter(r => r.doi === doi);
       if (toBanDia)  reports = reports.filter(r => r.toBanDia === toBanDia);
+      if (trichYeu) {
+        const kw = String(trichYeu).toLowerCase();
+        reports = reports.filter(r =>
+          (r.trichYeu || '').toLowerCase().includes(kw) ||
+          (r.soHoSo || '').toLowerCase().includes(kw));
+      }
+      if (maCode) {
+        const code = String(maCode).trim().toUpperCase();
+        reports = reports.filter(r => (r.soHoSo || '').trim().toUpperCase().endsWith(code));
+      }
     }
 
     const wsData = [
