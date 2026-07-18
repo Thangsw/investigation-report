@@ -3,6 +3,7 @@ import type { Investigator } from '../types';
 export interface Filters {
   dtvName: string;
   loaiHoSo: string;
+  maCode: string;
   doi: string;
   toBanDia: string;
   trichYeu: string;
@@ -36,6 +37,16 @@ export default function FilterBar({ investigators, filters, onChange }: Props) {
         <option value="">Tất cả loại</option>
         <option value="AK">AK</option>
         <option value="AD">AD</option>
+      </select>
+
+      <select
+        className="form-control"
+        value={filters.maCode}
+        onChange={e => onChange('maCode', e.target.value)}
+      >
+        <option value="">Tất cả mã</option>
+        <option value="D">Mã D</option>
+        <option value="F">Mã F</option>
       </select>
 
       <select

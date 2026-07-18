@@ -13,7 +13,7 @@ import { Download } from 'lucide-react';
 export default function DashboardPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [investigators, setInvestigators] = useState<Investigator[]>([]);
-  const [filters, setFilters] = useState<Filters>({ dtvName: '', loaiHoSo: '', doi: '', toBanDia: '', trichYeu: '' });
+  const [filters, setFilters] = useState<Filters>({ dtvName: '', loaiHoSo: '', doi: '', toBanDia: '', trichYeu: '', maCode: '' });
   const [sheetOpen, setSheetOpen] = useState(false);
   const [spotlight, setSpotlight] = useState<SpotlightType | null>(null);
   const [totalCaseTarget, setTotalCaseTarget] = useState(DEFAULT_TOTAL_CASE_TARGET);
@@ -77,6 +77,7 @@ export default function DashboardPage() {
       if (filters.loaiHoSo && report.loaiHoSo !== filters.loaiHoSo) return false;
       if (filters.doi && report.doi !== filters.doi) return false;
       if (filters.toBanDia && (report.toBanDia ?? 'Hoà Bình') !== filters.toBanDia) return false;
+      if (filters.maCode && !(report.soHoSo || '').trim().toUpperCase().endsWith(filters.maCode)) return false;
       if (filters.trichYeu) {
         const kw = filters.trichYeu.toLowerCase();
         const matchTrichYeu = report.trichYeu.toLowerCase().includes(kw);

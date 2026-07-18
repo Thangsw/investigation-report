@@ -11,7 +11,7 @@ import ExportButton from '../components/ExportButton';
 type SheetType = 'form' | 'dtv' | null;
 type Toast = { msg: string; ok: boolean };
 
-const EMPTY_FILTERS: Filters = { dtvName: '', loaiHoSo: '', doi: '', toBanDia: '', trichYeu: '' };
+const EMPTY_FILTERS: Filters = { dtvName: '', loaiHoSo: '', doi: '', toBanDia: '', trichYeu: '', maCode: '' };
 
 export default function ReportPage() {
   const [reports, setReports] = useState<Report[]>([]);
@@ -56,6 +56,7 @@ export default function ReportPage() {
       if (searchFilters.loaiHoSo && report.loaiHoSo !== searchFilters.loaiHoSo) return false;
       if (searchFilters.doi && report.doi !== searchFilters.doi) return false;
       if (searchFilters.toBanDia && (report.toBanDia ?? 'Hoà Bình') !== searchFilters.toBanDia) return false;
+      if (searchFilters.maCode && !(report.soHoSo || '').trim().toUpperCase().endsWith(searchFilters.maCode)) return false;
       if (searchFilters.trichYeu) {
         const kw = searchFilters.trichYeu.toLowerCase();
         const matchTrichYeu = report.trichYeu.toLowerCase().includes(kw);
