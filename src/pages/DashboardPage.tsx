@@ -77,7 +77,12 @@ export default function DashboardPage() {
       if (filters.loaiHoSo && report.loaiHoSo !== filters.loaiHoSo) return false;
       if (filters.doi && report.doi !== filters.doi) return false;
       if (filters.toBanDia && (report.toBanDia ?? 'Hoà Bình') !== filters.toBanDia) return false;
-      if (filters.trichYeu && !report.trichYeu.toLowerCase().includes(filters.trichYeu.toLowerCase())) return false;
+      if (filters.trichYeu) {
+        const kw = filters.trichYeu.toLowerCase();
+        const matchTrichYeu = report.trichYeu.toLowerCase().includes(kw);
+        const matchSoHoSo = (report.soHoSo || '').toLowerCase().includes(kw);
+        if (!matchTrichYeu && !matchSoHoSo) return false;
+      }
       return true;
     });
   }, [reports, filters]);

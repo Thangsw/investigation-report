@@ -62,7 +62,7 @@ export default function FilterBar({ investigators, filters, onChange }: Props) {
       <input
         type="text"
         className="form-control"
-        placeholder="Tìm theo trích yếu..."
+        placeholder="Tìm theo trích yếu hoặc số hồ sơ..."
         value={filters.trichYeu}
         onChange={e => onChange('trichYeu', e.target.value)}
       />
