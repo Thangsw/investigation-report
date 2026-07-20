@@ -1928,6 +1928,7 @@
                     <div class="form-group" id="act-date-group">
                         <label for="act-date">Ngày kích hoạt <span style="color:var(--accent-rose);">*</span></label>
                         <input type="date" id="act-date" class="input-control" style="font-family: var(--font-main);">
+                        <div style="font-size:0.78rem; color:#f59e0b; margin-top:6px; line-height:1.4;">⚠️ Điền chính xác ngày công dân được kích hoạt, không phải ngày báo cáo</div>
                     </div>
 
                     <!-- Chế độ chọn: thành công / báo lỗi -->
@@ -1981,6 +1982,7 @@
                     <div class="form-group" style="margin:0;">
                         <label for="ext-date">Ngày kích hoạt <span style="color:var(--accent-rose);">*</span></label>
                         <input type="date" id="ext-date" class="input-control" style="font-family: var(--font-main);">
+                        <div style="font-size:0.78rem; color:#f59e0b; margin-top:6px; line-height:1.4;">⚠️ Điền chính xác ngày công dân được kích hoạt, không phải ngày báo cáo</div>
                     </div>
 
                     <div>
@@ -2860,13 +2862,13 @@
             document.getElementById('act-resident-meta').innerText = `CCCD: ${cccd} | Xã/Thị trấn: ${commune}`;
             document.getElementById('act-officer-name').innerText = CURRENT_OFFICER ? CURRENT_OFFICER.name : '—';
             updateOfficerQuotaInfo();
-            // Đặt ngày kích hoạt mặc định = hôm nay (định dạng YYYY-MM-DD cho input date)
+            // KHÔNG điền sẵn ngày — để cán bộ tự nhập. Vẫn chặn ngày tương lai.
             const dateEl = document.getElementById('act-date');
             if (dateEl) {
                 const now = new Date();
                 const pad = (n) => String(n).padStart(2, '0');
-                dateEl.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-                dateEl.max = dateEl.value;   // không cho chọn ngày tương lai
+                dateEl.value = '';
+                dateEl.max = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;   // không cho chọn ngày tương lai
             }
             // Reset về chế độ chọn (ẩn form báo lỗi)
             hideIssueForm();
@@ -2885,12 +2887,12 @@
             document.getElementById('ext-cccd').value = '';
             document.getElementById('ext-birthday').value = '';
             document.getElementById('ext-officer-name').innerText = CURRENT_OFFICER.name;
-            // Ngày kích hoạt mặc định = hôm nay, không cho tương lai
+            // KHÔNG điền sẵn ngày kích hoạt — để cán bộ tự nhập. Vẫn chặn ngày tương lai.
             const now = new Date();
             const pad = (n) => String(n).padStart(2, '0');
             const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
             const dateEl = document.getElementById('ext-date');
-            dateEl.value = today; dateEl.max = today;
+            dateEl.value = ''; dateEl.max = today;
             document.getElementById('ext-birthday').max = today;
             document.getElementById('external-modal').classList.add('active');
             document.getElementById('ext-name').focus();
