@@ -182,8 +182,15 @@ const currentOfficer = (req) => {
   return VNEID_OFFICERS.find((o) => o.nameKey === payload.n) || null;
 };
 
-const calendarMonthKey = (d = new Date()) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+// Kỳ báo cáo: từ 15 tháng trước đến 23:59 ngày 14 tháng này; gắn nhãn theo tháng KẾT THÚC
+// Quy tắc: ngày 1..14 => tháng này, ngày 15..31 => tháng sau (M+1)
+// VD: 2026-07-14 => "2026-07", 2026-07-15 => "2026-08"
+const calendarMonthKey = (d = new Date()) => {
+  const day = d.getDate();
+  const base = new Date(d.getFullYear(), d.getMonth(), 1);
+  if (day >= 15) base.setMonth(base.getMonth() + 1);
+  return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}`;
+};
 
 // Tháng admin đã chốt (nếu có), lưu trên Volume. Rỗng => dùng tháng theo lịch.
 const readActiveMonthOverride = () => {
@@ -1197,6 +1204,7 @@ app.post('/api/vneid/login', (req, res) => {
       ip: getClientIp(req),
       userAgent: req.headers['user-agent'] || '',
       timestamp: new Date().toISOString(),
+      period: monthKey(),
       action: 'login',
     }).catch(() => {});
   }
@@ -1387,18 +1395,22 @@ const isAdmin = (req) => {
   return officer && officer.nameKey === VNEID_ADMIN_KEY;
 };
 
-// Mục 1: Log chung — toàn bộ lịch sử đăng nhập
+// Mục 1: Log chung — toàn bộ lịch sử đăng nhập (lọc theo kỳ hiện tại)
 app.get('/api/vneid/admin/access-log', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Không có quyền truy cập' });
-  const log = readVneidAccessLog();
+  const currentPeriod = monthKey();
+  const log = readVneidAccessLog()
+    .filter((e) => (e.period || calendarMonthKey(new Date(e.timestamp))) === currentPeriod);
   log.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   res.json({ log });
 });
 
-// Mục 2: Thống kê truy cập theo cán bộ — đếm lần, lần đầu, lần cuối
+// Mục 2: Thống kê truy cập theo cán bộ — đếm lần, lần đầu, lần cuối (lọc theo kỳ hiện tại)
 app.get('/api/vneid/admin/access-stats', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Không có quyền truy cập' });
-  const log = readVneidAccessLog();
+  const currentPeriod = monthKey();
+  const log = readVneidAccessLog()
+    .filter((e) => (e.period || calendarMonthKey(new Date(e.timestamp))) === currentPeriod);
   // Tổng hợp theo tên cán bộ
   const statsMap = {};
   for (const entry of log) {
@@ -1411,7 +1423,7 @@ app.get('/api/vneid/admin/access-stats', (req, res) => {
     if (entry.timestamp > statsMap[key].lastAccess) statsMap[key].lastAccess = entry.timestamp;
   }
   const accessed = Object.values(statsMap).sort((a, b) => b.count - a.count);
-  // Cán bộ chưa từng truy cập
+  // Cán bộ chưa từng truy cập trong kỳ này
   const accessedNames = new Set(accessed.map((s) => s.officerName));
   const neverAccessed = VNEID_OFFICERS
     .filter((o) => !accessedNames.has(o.name))
